@@ -1,0 +1,18 @@
+{
+  "email": {
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "user": "",
+    "password": ""
+  },
+  "hardware": {
+    "serial_port": "COM8",
+    "baud_rate": 9600,
+    "timeout": 1
+  },
+  "model": {
+    "model_name": "gemini-2.5-flash-native-audio-preview-09-2025",
+    "voice": "Aoede",
+    "temperature": 0.8
+  }
+}

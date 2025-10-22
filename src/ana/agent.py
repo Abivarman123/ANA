@@ -1,49 +1,33 @@
-from dotenv import load_dotenv
+"""Main agent implementation for ANA."""
+
 from google.genai import types
 from livekit import agents
 from livekit.agents import Agent, AgentSession, RoomInputOptions
-from livekit.plugins import (
-    google,
-    noise_cancellation,
-)
+from livekit.plugins import google, noise_cancellation
 
-from prompts import AGENT_INSTRUCTION, SESSION_INSTRUCTION
-from tools import (
-    get_weather,
-    search_web,
-    send_email,
-    shutdown_agent,
-    turn_led_off,
-    turn_led_on,
-    turn_led_on_for_duration,
-)
-
-load_dotenv()
+from .config import config
+from .prompts import AGENT_INSTRUCTION, SESSION_INSTRUCTION
+from .tools import get_tools
 
 
 class Assistant(Agent):
+    """ANA Assistant agent."""
+
     def __init__(self) -> None:
         super().__init__(
             instructions=AGENT_INSTRUCTION,
             llm=google.beta.realtime.RealtimeModel(
-                model="gemini-2.5-flash-native-audio-preview-09-2025",
+                model=config.model["model_name"],
                 _gemini_tools=[types.GoogleSearch()],
-                voice="Aoede",
-                temperature=0.8,
+                voice=config.model["voice"],
+                temperature=config.model["temperature"],
             ),
-            tools=[
-                get_weather,
-                search_web,
-                send_email,
-                turn_led_on,
-                turn_led_off,
-                turn_led_on_for_duration,
-                shutdown_agent,
-            ],
+            tools=get_tools(),
         )
 
 
 async def entrypoint(ctx: agents.JobContext):
+    """Main entrypoint for the agent."""
     session = AgentSession()
 
     await session.start(

@@ -1,6 +1,5 @@
 # Python-generated files
 __pycache__/
-__pycache__
 *.py[oc]
 build/
 dist/
@@ -8,8 +7,20 @@ wheels/
 *.egg-info
 
 # Virtual environments
-.venv
-.vscode
+.venv/
+.vscode/
+
+# Environment variables
 .env
 .env.local
-.env*
+.env.*
+
+# Temporary files
+cleanup.py
+test_config.py
+*.tmp
+*.log
+
+# Documentation (optional)
+CHANGES.md
+docs/

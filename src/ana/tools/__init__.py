@@ -7,6 +7,7 @@ from .search import search_web
 from .email import send_email
 from .hardware import turn_led_on, turn_led_off, turn_led_on_for_duration
 from .system import shutdown_agent
+from .file_manager import create_file, read_file, edit_file, list_files, delete_file, delete_folder
 
 
 class ToolRegistry:
@@ -25,6 +26,12 @@ class ToolRegistry:
             turn_led_on,
             turn_led_off,
             turn_led_on_for_duration,
+            create_file,
+            read_file,
+            edit_file,
+            list_files,
+            delete_file,
+            delete_folder,
             shutdown_agent,
         ]
 
@@ -66,5 +73,11 @@ __all__ = [
     "turn_led_on",
     "turn_led_off",
     "turn_led_on_for_duration",
+    "create_file",
+    "read_file",
+    "edit_file",
+    "list_files",
+    "delete_file",
+    "delete_folder",
     "shutdown_agent",
 ]

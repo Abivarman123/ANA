@@ -27,4 +27,6 @@ dependencies = [
   "soundfile>=0.13.1",
   "pyserial>=3.5",
   "ddgs>=9.6.1",
+  "pvporcupine>=3.0.0",
+  "psutil>=6.1.0",
 ]

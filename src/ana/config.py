@@ -23,8 +23,11 @@ class Config:
             raise FileNotFoundError(f"Config file not found: {config_file}")
 
         # Load JSON config
-        with open(config_file, "r") as f:
-            self._config: dict[str, Any] = json.load(f)
+        try:
+            with open(config_file, "r") as f:
+                self._config: dict[str, Any] = json.load(f)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in config file {config_file}: {e}")
 
         # Override sensitive credentials from environment
         self._config["email"]["user"] = os.getenv("GMAIL_USER")
@@ -44,6 +47,11 @@ class Config:
     def model(self) -> dict[str, Any]:
         """Model configuration."""
         return self._config["model"]
+
+    @property
+    def wake_word(self) -> dict[str, Any]:
+        """Wake word configuration."""
+        return self._config.get("wake_word", {})
 
     def is_email_configured(self) -> bool:
         """Check if email credentials are configured."""

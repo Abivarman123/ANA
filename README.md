@@ -5,11 +5,13 @@
 ## Features
 
 - 🎙️ **Voice**: Real-time voice interaction
+- 🎤 **Wake Word**: Always-on "Hey ANA" voice activation
 - 🔌 **Extensible**: Easy-to-extend modular architecture
 - 🌤️ **Weather**: Get current weather for any city
 - 🔍 **Web Search**: Search the web using DuckDuckGo
 - 📧 **Email**: Send emails through Gmail
 - 💡 **LED Control**: Control Arduino-connected LEDs
+- 📁 **File Manager**: Safe file operations on Desktop (sandboxed)
 
 ## Quick Start
 
@@ -19,6 +21,7 @@
 - uv + ruff (not required, but recommended)
 - Gmail account with App Password (for email features)
 - Gemini free API key
+- Picovoice Access Key (free, for wake word detection)
 - Arduino (optional, for LED control)
 
 ### Installation
@@ -41,7 +44,12 @@ Create a `.env` file with your sensitive credentials:
 ```env
 GMAIL_USER=your-email@gmail.com
 GMAIL_APP_PASSWORD=your-app-password
+PICOVOICE_KEY=your-picovoice-key
 ```
+
+Get your free Picovoice key from: https://console.picovoice.ai/
+
+**Note:** Only credentials go in `.env`. All other settings (sensitivity, ports, etc.) are in `config.json`.
 
 #### 2. Application Settings (config.json)
 
@@ -62,6 +70,16 @@ All non-sensitive settings are in `config.json`:
     "model_name": "gemini-2.5-flash-native-audio-preview-09-2025",
     "voice": "Aoede",
     "temperature": 0.8
+  },
+  "file_manager": {
+    "sandbox_path": "~/Desktop",
+    "max_file_size_mb": 5
+  },
+  "wake_word": {
+    "keyword_path": "Hey-ANA.ppn",
+    "sensitivity": 0.5,
+    "max_retries": 5,
+    "retry_delay_seconds": 5
   }
 }
 ```
@@ -70,41 +88,72 @@ Edit `config.json` to customize settings like Arduino port, model parameters, et
 
 ### Running ANA
 
+#### Standard Mode
 ```bash
 # Run the agent
 uv run main.py console
 ```
 
+#### Wake Word Mode (Always-On Voice Activation)
+
+```bash
+python wake_service.py
+```
+
+Say **"Hey ANA"** to activate!
+
+📖 **Setup guide:** See [WAKE_WORD_GUIDE.md](WAKE_WORD_GUIDE.md)
+
 ## Project Structure
 
 ```
 ANA/
-├── src/ana/              # Main package
-│   ├── agent.py          # Agent implementation
-│   ├── config.py         # Configuration loader
-│   ├── prompts.py        # Prompt templates
-│   └── tools/            # Modular tool system
-│       ├── weather.py    # Weather tools
-│       ├── search.py     # Search tools
-│       ├── email.py      # Email tools
-│       ├── hardware.py   # Arduino/LED control
-│       └── system.py     # System control
-├── config.json           # Application settings
-├── .env                  # Credentials (not in git)
-├── main.py               # Entry point
-├── LICENSE               # MIT License
-└── README.md             # This file
+├── src/ana/                      # Main package
+│   ├── agent.py                  # Agent implementation
+│   ├── config.py                 # Configuration loader
+│   ├── prompts.py                # Prompt templates
+│   ├── wake_word.py              # Wake word detection module
+│   └── tools/                    # Modular tool system
+│       ├── weather.py            # Weather tools
+│       ├── search.py             # Search tools
+│       ├── email.py              # Email tools
+│       ├── hardware.py           # Arduino/LED control
+│       └── system.py             # System control
+├── config.json                   # Application settings
+├── .env                          # Credentials (not in git)
+├── main.py                       # Entry point
+├── wake_service.py               # Wake word background service
+├── Hey-ANA.ppn                   # Wake word model file
+├── WAKE_WORD_GUIDE.md            # Wake word setup guide
+├── LICENSE                       # MIT License
+└── README.md                     # This file
 ```
 
 ## Usage Examples
 
 ### Voice Commands
 
+**Wake Word:**
+- "Hey ANA" - Activates the assistant (when wake word service is running)
+
+**General:**
 - "What's the weather in London?"
 - "Search the web for Python tutorials"
 - "Send an email to john@example.com"
+
+**LED Control:**
+- "Turn on the LED"
 - "Turn off the LED"
 - "Turn on the LED for 10 seconds"
+
+**File Management:**
+- "Create a file called notes.txt with content 'Hello World'"
+- "Read the file notes.txt"
+- "Edit notes.txt and change the content to 'Updated content'"
+- "List all files on my Desktop"
+- "Delete the file notes.txt"
+
+**System:**
 - "Shut down ANA"
 
 ### Personality

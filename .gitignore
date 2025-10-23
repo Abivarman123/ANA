@@ -13,14 +13,29 @@ wheels/
 # Environment variables
 .env
 .env.local
-.env.*
+.env.local.*
 
-# Temporary files
-cleanup.py
-test_config.py
-*.tmp
+# Logs
+logs/
 *.log
 
-# Documentation (optional)
+# Temporary and test files
+*.tmp
+*.bak
+*~
+test_*.py
+cleanup.py
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.idea/
+*.swp
+*.swo
+
+# Documentation
 CHANGES.md
 docs/

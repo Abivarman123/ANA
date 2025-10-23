@@ -1,9 +1,7 @@
 {
   "email": {
     "smtp_server": "smtp.gmail.com",
-    "smtp_port": 587,
-    "user": "",
-    "password": ""
+    "smtp_port": 587
   },
   "hardware": {
     "serial_port": "COM8",
@@ -14,5 +12,15 @@
     "model_name": "gemini-2.5-flash-native-audio-preview-09-2025",
     "voice": "Aoede",
     "temperature": 0.8
+  },
+  "file_manager": {
+    "sandbox_path": "~/Desktop",
+    "max_file_size_mb": 5
+  },
+  "wake_word": {
+    "keyword_path": "Hey-ANA.ppn",
+    "sensitivity": 0.5,
+    "max_retries": 5,
+    "retry_delay_seconds": 5
   }
 }

@@ -130,32 +130,45 @@ async def play_video(
         query: Video search query (e.g., "Python tutorial", "how to cook pasta")
     """
     try:
-        # If it's already a YouTube URL, just play it
-        if "youtube.com" in query or "youtu.be" in query:
-            url = query if query.startswith("http") else f"https://{query}"
-            action = "Playing video"
-        else:
-            # Search YouTube and get first video
+        # If the user is asking to search (not play), show YouTube search results only
+        lower_q = query.lower()
+        is_search_intent = (
+            any(p in lower_q for p in [
+                "search", "look up", "lookup", "look for", "find", "show results", "results", "show", "show me"
+            ])
+            and not any(p in lower_q for p in ["play", "watch"])
+        )
+        if is_search_intent:
             encoded_query = quote_plus(query)
-            search_url = f"https://www.youtube.com/results?search_query={encoded_query}"
-
-            # Fetch search results page
-            async with aiohttp.ClientSession() as session:
-                async with session.get(search_url) as response:
-                    html = await response.text()
-
-            # Extract first video ID using regex
-            # YouTube embeds video data in the page as JSON
-            video_id_match = re.search(r'"videoId":"([^"]{11})"', html)
-
-            if video_id_match:
-                video_id = video_id_match.group(1)
-                url = f"https://www.youtube.com/watch?v={video_id}"
-                action = f"Playing first result for '{query}'"
+            url = f"https://www.youtube.com/results?search_query={encoded_query}"
+            action = f"Opened search results for '{query}'"
+        else:
+            # If it's already a YouTube URL, just play it
+            if "youtube.com" in query or "youtu.be" in query:
+                url = query if query.startswith("http") else f"https://{query}"
+                action = "Playing video"
             else:
-                # Fallback to search results if can't find video
-                url = search_url
-                action = f"Opened search results for '{query}'"
+                # Search YouTube and get first video
+                encoded_query = quote_plus(query)
+                search_url = f"https://www.youtube.com/results?search_query={encoded_query}"
+
+                # Fetch search results page
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(search_url) as response:
+                        html = await response.text()
+
+                # Extract first video ID using regex
+                # YouTube embeds video data in the page as JSON
+                video_id_match = re.search(r'"videoId":"([^\"]{11})"', html)
+
+                if video_id_match:
+                    video_id = video_id_match.group(1)
+                    url = f"https://www.youtube.com/watch?v={video_id}"
+                    action = f"Playing first result for '{query}'"
+                else:
+                    # Fallback to search results if can't find video
+                    url = search_url
+                    action = f"Opened search results for '{query}'"
 
         # Open in Chrome
         chrome_path = "C:/Program Files/Google/Chrome/Application/chrome.exe"

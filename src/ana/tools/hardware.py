@@ -3,6 +3,7 @@
 import logging
 import time
 from typing import Optional
+import atexit
 
 import serial
 from livekit.agents import RunContext, function_tool
@@ -11,21 +12,37 @@ from ..config import config
 
 
 class ArduinoController:
-    """Manages serial connection to Arduino."""
+    """Manages serial connection to Arduino with automatic cleanup."""
 
     def __init__(self):
         self._connection: Optional[serial.Serial] = None
         self._config = config.hardware
+        self._last_used = time.time()
+        self._idle_timeout = 300  # Close connection after 5 minutes of inactivity
 
     def get_connection(self) -> serial.Serial:
         """Get or create serial connection to Arduino."""
+        # Close idle connection to free resources
+        if self._connection and self._connection.is_open:
+            if time.time() - self._last_used > self._idle_timeout:
+                logging.info("Closing idle Arduino connection")
+                self._connection.close()
+                self._connection = None
+        
         if self._connection is None or not self._connection.is_open:
-            self._connection = serial.Serial(
-                self._config["serial_port"],
-                self._config["baud_rate"],
-                timeout=self._config["timeout"],
-            )
-            time.sleep(2)
+            try:
+                self._connection = serial.Serial(
+                    self._config["serial_port"],
+                    self._config["baud_rate"],
+                    timeout=self._config["timeout"],
+                )
+                time.sleep(2)
+                logging.info("Arduino connection established")
+            except Exception as e:
+                logging.error(f"Failed to connect to Arduino: {e}")
+                raise
+        
+        self._last_used = time.time()
         return self._connection
 
     def send_command(self, command: str) -> str:
@@ -42,11 +59,20 @@ class ArduinoController:
     def close(self):
         """Close the serial connection."""
         if self._connection and self._connection.is_open:
+            logging.info("Closing Arduino connection")
             self._connection.close()
+            self._connection = None
+    
+    def __del__(self):
+        """Cleanup on deletion."""
+        self.close()
 
 
 # Global Arduino controller instance
 _arduino = ArduinoController()
+
+# Register cleanup on exit
+atexit.register(_arduino.close)
 
 
 @function_tool()

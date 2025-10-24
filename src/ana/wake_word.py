@@ -1,12 +1,13 @@
 """Wake word detection module for ANA using Porcupine."""
 
+import atexit
 import logging
 import os
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, Set
 
 import numpy as np
 import psutil
@@ -14,6 +15,9 @@ import pvporcupine
 import sounddevice as sd
 
 logger = logging.getLogger(__name__)
+
+# Track spawned processes for cleanup
+_spawned_processes: Set[subprocess.Popen] = set()
 
 
 class WakeWordDetector:
@@ -40,6 +44,7 @@ class WakeWordDetector:
         self.access_key = access_key
         self.on_wake_callback = on_wake_callback
         self.is_running = False
+        self._cleanup_registered = False
 
         # Get wake word config
         wake_config = config.wake_word
@@ -61,6 +66,11 @@ class WakeWordDetector:
         self.keyword_path = str(keyword_path)
         self.porcupine = None
         self.audio_stream = None
+        
+        # Register cleanup on exit
+        if not self._cleanup_registered:
+            atexit.register(self.stop)
+            self._cleanup_registered = True
 
     def start(self):
         """Start listening for wake word."""
@@ -100,7 +110,8 @@ class WakeWordDetector:
                     self._handle_wake_word()
 
         except KeyboardInterrupt:
-            print("\n⏹️  Wake word detector stopped by user.")
+            logger.info("Service stopped by user")
+            cleanup_spawned_processes()
         except Exception as e:
             print(f"❌ Error in wake word detector: {e}")
             raise
@@ -108,17 +119,40 @@ class WakeWordDetector:
             self.stop()
 
     def stop(self):
-        """Stop the wake word detector."""
+        """Stop the wake word detector and cleanup resources."""
         self.is_running = False
 
         if self.audio_stream is not None:
-            self.audio_stream.stop()
-            self.audio_stream.close()
-            self.audio_stream = None
+            try:
+                self.audio_stream.stop()
+                self.audio_stream.close()
+                logger.info("Audio stream closed")
+            except Exception as e:
+                logger.warning(f"Error closing audio stream: {e}")
+            finally:
+                self.audio_stream = None
 
         if self.porcupine is not None:
-            self.porcupine.delete()
-            self.porcupine = None
+            try:
+                self.porcupine.delete()
+                logger.info("Porcupine instance deleted")
+            except Exception as e:
+                logger.warning(f"Error deleting Porcupine: {e}")
+            finally:
+                self.porcupine = None
+    
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit with cleanup."""
+        self.stop()
+        return False
+    
+    def __del__(self):
+        """Cleanup on deletion."""
+        self.stop()
 
     def _handle_wake_word(self):
         """Handle wake word detection."""
@@ -160,11 +194,12 @@ class WakeWordDetector:
 
             if sys.platform == "win32":
                 # Windows: Start in new console window with uv run
-                # Use 'python' explicitly to ensure visible terminal (not pythonw)
+                # Use CREATE_NEW_PROCESS_GROUP to allow independent process lifecycle
                 process = subprocess.Popen(
                     ["cmd", "/c", "start", "cmd", "/k", "uv", "run", "python", str(main_script), "console"],
                     cwd=str(project_root),
                     shell=True,
+                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0,
                 )
             else:
                 # Unix-like: Start in background
@@ -173,7 +208,11 @@ class WakeWordDetector:
                     cwd=str(project_root),
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
+                    start_new_session=True,  # Detach from parent process
                 )
+            
+            # Track process for potential cleanup
+            _spawned_processes.add(process)
 
             # Wait briefly to check if process started successfully
             time.sleep(1)
@@ -184,6 +223,26 @@ class WakeWordDetector:
 
         except Exception as e:
             print(f"❌ Failed to launch ANA: {e}")
+
+
+def cleanup_spawned_processes():
+    """Cleanup any spawned ANA processes that are still running."""
+    for process in list(_spawned_processes):
+        try:
+            if process.poll() is None:  # Process still running
+                logger.info(f"Cleaning up spawned process {process.pid}")
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+            _spawned_processes.remove(process)
+        except Exception as e:
+            logger.warning(f"Error cleaning up process: {e}")
+
+
+# Register cleanup on exit
+atexit.register(cleanup_spawned_processes)
 
 
 def main():
@@ -199,14 +258,12 @@ def main():
         print("Please get your free access key from https://console.picovoice.ai/")
         sys.exit(1)
 
-    # Create and start detector
-    detector = WakeWordDetector(access_key=access_key)
-
-    try:
-        detector.start()
-    except KeyboardInterrupt:
-        print("\n👋 Shutting down wake word detector...")
-        detector.stop()
+    # Create and start detector with context manager
+    with WakeWordDetector(access_key=access_key) as detector:
+        try:
+            detector.start()
+        except KeyboardInterrupt:
+            print("\n👋 Shutting down wake word detector...")
 
 
 if __name__ == "__main__":

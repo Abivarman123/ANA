@@ -29,4 +29,5 @@ dependencies = [
   "ddgs>=9.6.1",
   "pvporcupine>=3.0.0",
   "psutil>=6.1.0",
+  "send2trash>=1.8.3",
 ]

@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 
 from livekit.agents import RunContext, function_tool
+from send2trash import send2trash
 
 from ..config import config
 from .base import handle_tool_error
@@ -165,9 +166,11 @@ async def create_file(
     Returns:
         Success message with file path
     """
+    logging.info(f"create_file tool called with file_path='{file_path}', content_length={len(content)}")
     try:
         # Validate path and extension
         full_path = _validate_path(file_path)
+        logging.info(f"Validated path: {full_path}")
         _validate_extension(full_path)
         _validate_content_size(content)
         
@@ -181,7 +184,7 @@ async def create_file(
         # Write content to file
         full_path.write_text(content, encoding='utf-8')
         
-        logging.info(f"Created file: {full_path}")
+        logging.info(f"✓ Successfully created file: {full_path}")
         return f"✓ File created successfully: {file_path}"
         
     except FileManagerError as e:
@@ -341,7 +344,7 @@ async def delete_file(
     file_path: str,
 ) -> str:
     """
-    Delete a file from the Desktop sandbox.
+    Move a file to the recycle bin from the Desktop sandbox.
     
     Args:
         file_path: Relative path to file to delete
@@ -360,11 +363,11 @@ async def delete_file(
         if not full_path.is_file():
             raise FileManagerError(f"Not a file: {file_path}. Use this only for files, not directories.")
         
-        # Delete file
-        full_path.unlink()
+        # Move file to recycle bin instead of permanent deletion
+        send2trash(str(full_path))
         
-        logging.info(f"Deleted file: {full_path}")
-        return f"✓ File deleted successfully: {file_path}"
+        logging.info(f"Moved file to recycle bin: {full_path}")
+        return f"✓ File moved to recycle bin: {file_path}"
         
     except FileManagerError as e:
         logging.error(f"File deletion failed: {e}")
@@ -378,7 +381,7 @@ async def delete_folder(
     folder_path: str,
 ) -> str:
     """
-    Delete a folder and all its contents from the Desktop sandbox.
+    Move a folder and all its contents to the recycle bin from the Desktop sandbox.
     
     Args:
         folder_path: Relative path to folder to delete
@@ -386,8 +389,6 @@ async def delete_folder(
     Returns:
         Success message or error
     """
-    import shutil
-    
     try:
         # Validate path
         full_path = _validate_path(folder_path)
@@ -399,11 +400,11 @@ async def delete_folder(
         if not full_path.is_dir():
             raise FileManagerError(f"Not a folder: {folder_path}. Use delete_file for files.")
         
-        # Delete folder and all contents
-        shutil.rmtree(full_path)
+        # Move folder and all contents to recycle bin instead of permanent deletion
+        send2trash(str(full_path))
         
-        logging.info(f"Deleted folder: {full_path}")
-        return f"✓ Folder deleted successfully: {folder_path}"
+        logging.info(f"Moved folder to recycle bin: {full_path}")
+        return f"✓ Folder moved to recycle bin: {folder_path}"
         
     except FileManagerError as e:
         logging.error(f"Folder deletion failed: {e}")

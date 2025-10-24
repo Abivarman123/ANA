@@ -93,6 +93,7 @@ name = "ana"
 version = "0.0.1"
 source = { virtual = "." }
 dependencies = [
+    { name = "aiohttp" },
     { name = "ddgs" },
     { name = "duckduckgo-search" },
     { name = "google-genai" },
@@ -120,6 +121,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiohttp", specifier = ">=3.9.0" },
     { name = "ddgs", specifier = ">=9.6.1" },
     { name = "duckduckgo-search" },
     { name = "google-genai" },

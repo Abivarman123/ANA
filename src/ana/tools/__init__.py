@@ -1,13 +1,20 @@
 """Tool registry and management for ANA."""
 
-from typing import List, Callable
+from typing import Callable, List
 
-from .weather import get_weather
-from .search import search_web
 from .email import send_email
-from .hardware import turn_led_on, turn_led_off, turn_led_on_for_duration
+from .file_manager import (
+    create_file,
+    delete_file,
+    delete_folder,
+    edit_file,
+    list_files,
+    read_file,
+)
+from .hardware import turn_led_off, turn_led_on, turn_led_on_for_duration
+from .search import open_search, play_video, search_web
 from .system import shutdown_agent
-from .file_manager import create_file, read_file, edit_file, list_files, delete_file, delete_folder
+from .weather import get_weather
 
 
 class ToolRegistry:
@@ -22,6 +29,8 @@ class ToolRegistry:
         self._tools = [
             get_weather,
             search_web,
+            open_search,
+            play_video,
             send_email,
             turn_led_on,
             turn_led_off,
@@ -69,6 +78,8 @@ __all__ = [
     "get_tools",
     "get_weather",
     "search_web",
+    "open_search",
+    "play_video",
     "send_email",
     "turn_led_on",
     "turn_led_off",

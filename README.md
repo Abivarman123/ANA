@@ -6,6 +6,8 @@
 
 - 🎙️ **Voice**: Real-time voice interaction
 - 🎤 **Wake Word**: Always-on "Hey ANA" voice activation
+- 🧠 **Long‑term Memory**: Persist user context with Mem0 (project-level custom instructions)
+- 🧩 **MCP Extensibility**: Add external tool servers dynamically
 - 🔌 **Extensible**: Easy-to-extend modular architecture
 - 🌤️ **Weather**: Get current weather for any city
 - 🔍 **Web Search**: Search the web using DuckDuckGo
@@ -45,6 +47,7 @@ Create a `.env` file with your sensitive credentials:
 GMAIL_USER=your-email@gmail.com
 GMAIL_APP_PASSWORD=your-app-password
 PICOVOICE_KEY=your-picovoice-key
+MEM0_API_KEY=your-mem0-api-key
 ```
 
 Get your free Picovoice key from: https://console.picovoice.ai/
@@ -80,7 +83,9 @@ All non-sensitive settings are in `config.json`:
     "sensitivity": 0.5,
     "max_retries": 5,
     "retry_delay_seconds": 5
-  }
+  },
+  "mcp_servers": [],
+  "user_name": "abivarman"
 }
 ```
 
@@ -102,7 +107,17 @@ python wake_service.py
 
 Say **"Hey ANA"** to activate!
 
-📖 **Setup guide:** See [WAKE_WORD_GUIDE.md](WAKE_WORD_GUIDE.md)
+## Memory (Mem0)
+
+- ANA initializes a Mem0 client on startup and sets project-level custom instructions to store only meaningful, long-term info.
+- Custom instructions apply only to new memories added after initialization. Existing memories are not retroactively filtered.
+- Configure Mem0 via:
+  - `.env`: set `MEM0_API_KEY`
+  - `config.json`: set `user_name` for per-user memories
+
+Tools related to memory live in `src/ana/tools/memory.py`:
+- `search_memories(query, limit)` retrieves relevant past info
+- `get_recent_memories(count)` fetches latest stored facts
 
 ## Project Structure
 
@@ -118,13 +133,16 @@ ANA/
 │       ├── search.py             # Search tools
 │       ├── email.py              # Email tools
 │       ├── hardware.py           # Arduino/LED control
-│       └── system.py             # System control
+│       ├── memory.py             # Long-term memory (Mem0) tools & helpers
+│       └── system.py             # System control (graceful shutdown, terminal close)
+│── wake_word/
+│   ├── Hey-ANA.ppn               # Wake word model file
+│   ├── start_wake_service.bat    # Start wake word service
+│   ├── stop_wake_service.bat     # Stop wake word service
+│   └── wake_service.py           # Wake word background service
 ├── config.json                   # Application settings
 ├── .env                          # Credentials (not in git)
 ├── main.py                       # Entry point
-├── wake_service.py               # Wake word background service
-├── Hey-ANA.ppn                   # Wake word model file
-├── WAKE_WORD_GUIDE.md            # Wake word setup guide
 ├── LICENSE                       # MIT License
 └── README.md                     # This file
 ```
@@ -172,6 +190,13 @@ The project uses a modular architecture for easy extension and maintenance:
 - **Tools**: Each category in its own file with a registry system
 - **Agent**: Clean separation of concerns
 - **Prompts**: Template-based prompt management
+- **Memory**: Mem0 project-level custom instructions with verification and logging
+- **Shutdown**: Graceful shutdown triggers memory save and closes terminal on Windows
+
+## MCP (Model Context Protocol)
+
+- Configure external tool servers via `mcp_servers` in `config.json` (array of URLs)
+- Servers are auto-initialized and exposed as tools to the agent
 
 ## Development
 

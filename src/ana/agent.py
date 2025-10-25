@@ -38,16 +38,23 @@ async def entrypoint(ctx: agents.JobContext):
     """Main entrypoint for the agent."""
 
     session = AgentSession()
-    user_name = "abivarman"
+    user_name = config.get("user_name")
 
     # Initialize Mem0 client with custom instructions
-    mem0 = initialize_mem0_client()
-
-    # Load initial memories at startup (optimized for performance)
-    results, memory_str = load_initial_memories(mem0, user_name, count=10)
-
-    # Create initial chat context with loaded memories
-    initial_ctx = create_memory_context(results, user_name, has_mem0=mem0 is not None)
+    try:
+        mem0 = initialize_mem0_client()
+        # Load initial memories at startup (optimized for performance)
+        results, memory_str = load_initial_memories(mem0, user_name, count=10)
+        # Create initial chat context with loaded memories
+        initial_ctx = create_memory_context(
+            results, user_name, has_mem0=mem0 is not None
+        )
+    except Exception as e:
+        # Log the error and fall back to no memory context
+        agents.logger.warning(f"Failed to initialize memory: {e}")
+        mem0 = None
+        results, memory_str = [], ""
+        initial_ctx = create_memory_context([], user_name, has_mem0=False)
 
     # Define shutdown hook for saving conversation to Mem0
     async def save_conversation():

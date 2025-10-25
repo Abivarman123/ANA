@@ -23,5 +23,6 @@
     "max_retries": 5,
     "retry_delay_seconds": 5
   },
-  "mcp_servers": []
+  "mcp_servers": [],
+  "user_name": "abivarman"
 }

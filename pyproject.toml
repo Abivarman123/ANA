@@ -14,7 +14,7 @@ dependencies = [
   "livekit-plugins-google",
   "livekit-plugins-noise-cancellation",
   "mem0ai",
-  "duckduckgo-search",
+  "ddgs",
   "langchain_community",
   "requests",
   "python-dotenv",

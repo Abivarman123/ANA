@@ -124,26 +124,36 @@ async def play_video(
     context: RunContext,  # type: ignore
     query: str,
 ) -> str:
-    """Search for a video on YouTube and play the first result.
+    """Play a YouTube video only when explicitly asked to play or watch.
 
     Args:
-        query: Video search query (e.g., "Python tutorial", "how to cook pasta")
+        query: Video search query or a YouTube URL.
+
+    Behavior:
+        - If the user explicitly says to "play" or "watch", open the first video result.
+        - If there is no explicit play intent, open YouTube search results instead.
+        - If a direct YouTube video URL is provided, play it.
     """
     try:
-        # If the user is asking to search (not play), show YouTube search results only
-        lower_q = query.lower()
-        is_search_intent = (
-            any(p in lower_q for p in [
-                "search", "look up", "lookup", "look for", "find", "show results", "results", "show", "show me"
-            ])
-            and not any(p in lower_q for p in ["play", "watch"])
+        # Default to search unless there is explicit play intent
+        lower_q = query.lower().strip()
+        has_play_intent = any(
+            p in lower_q for p in [
+                "play", "watch", "start playback", "start playing", "resume video", "begin video"
+            ]
         )
-        if is_search_intent:
+
+        # If it's a direct YouTube URL, always treat as play intent
+        if ("youtube.com" in lower_q or "youtu.be" in lower_q):
+            has_play_intent = True
+
+        if not has_play_intent:
+            # Open search results on YouTube without auto-playing
             encoded_query = quote_plus(query)
             url = f"https://www.youtube.com/results?search_query={encoded_query}"
             action = f"Opened search results for '{query}'"
         else:
-            # If it's already a YouTube URL, just play it
+            # Explicit play intent
             if "youtube.com" in query or "youtu.be" in query:
                 url = query if query.startswith("http") else f"https://{query}"
                 action = "Playing video"
@@ -158,7 +168,6 @@ async def play_video(
                         html = await response.text()
 
                 # Extract first video ID using regex
-                # YouTube embeds video data in the page as JSON
                 video_id_match = re.search(r'"videoId":"([^\"]{11})"', html)
 
                 if video_id_match:

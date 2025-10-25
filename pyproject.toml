@@ -8,7 +8,7 @@ authors = [{ name = "Abivarman", email = "jabivarman@gmail.com" }]
 license = { text = "MIT" }
 dependencies = [
   'livekit',
-  'livekit-agents',
+  'livekit-agents[mcp]',
   'livekit-plugins-openai',
   'livekit-plugins-silero',
   'livekit-plugins-google',

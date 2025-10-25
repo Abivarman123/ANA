@@ -22,5 +22,6 @@
     "sensitivity": 0.5,
     "max_retries": 5,
     "retry_delay_seconds": 5
-  }
+  },
+  "mcp_servers": []
 }

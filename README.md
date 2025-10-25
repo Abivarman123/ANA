@@ -14,6 +14,7 @@
 - 📧 **Email**: Send emails through Gmail
 - 💡 **LED Control**: Control Arduino-connected LEDs
 - 📁 **File Manager**: Safe file operations on Desktop (sandboxed)
+- 💻 **System Monitor**: Check CPU, RAM, storage, and running processes
 
 ## Quick Start
 
@@ -44,10 +45,14 @@ uv sync
 Create a `.env` file with your sensitive credentials:
 
 ```env
-GMAIL_USER=your-email@gmail.com
-GMAIL_APP_PASSWORD=your-app-password
-PICOVOICE_KEY=your-picovoice-key
-MEM0_API_KEY=your-mem0-api-key
+GOOGLE_API_KEY=gemini api key
+LIVEKIT_URL=livekit url
+LIVEKIT_API_KEY=livekit api key
+LIVEKIT_API_SECRET=livekit api secret
+GMAIL_USER=gmail account
+GMAIL_APP_PASSWORD=gmail app password
+PICOVOICE_KEY=pico voice key
+MEM0_API_KEY=mem0 api key
 ```
 
 Get your free Picovoice key from: https://console.picovoice.ai/
@@ -134,7 +139,7 @@ ANA/
 │       ├── email.py              # Email tools
 │       ├── hardware.py           # Arduino/LED control
 │       ├── memory.py             # Long-term memory (Mem0) tools & helpers
-│       └── system.py             # System control (graceful shutdown, terminal close)
+│       └── system.py             # System control & monitoring (shutdown, system info)
 │── wake_word/
 │   ├── Hey-ANA.ppn               # Wake word model file
 │   ├── start_wake_service.bat    # Start wake word service
@@ -170,6 +175,13 @@ ANA/
 - "Edit notes.txt and change the content to 'Updated content'"
 - "List all files on my Desktop"
 - "Delete the file notes.txt"
+
+**System Monitoring:**
+- "What's my system status?"
+- "Check RAM usage"
+- "Show me CPU usage"
+- "How much storage do I have?"
+- "Which processes are using the most memory?"
 
 **System:**
 - "Shut down ANA"

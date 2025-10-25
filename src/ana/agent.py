@@ -2,20 +2,25 @@
 
 from google.genai import types
 from livekit import agents
-from livekit.agents import Agent, AgentSession, RoomInputOptions, mcp
+from livekit.agents import Agent, AgentSession, RoomInputOptions
 from livekit.plugins import google, noise_cancellation
 
 from .config import config
 from .prompts import AGENT_INSTRUCTION, SESSION_INSTRUCTION
 from .tools import get_tools
+from .tools.memory import (
+    create_memory_context,
+    initialize_mem0_client,
+    load_initial_memories,
+    save_conversation_to_mem0,
+)
+from .tools.system import close_terminal_window
 
 
 class Assistant(Agent):
     """ANA Assistant agent."""
 
-    def __init__(self) -> None:
-        mcp_servers = self._load_mcp_servers()
-
+    def __init__(self, chat_ctx=None) -> None:
         super().__init__(
             instructions=AGENT_INSTRUCTION,
             llm=google.beta.realtime.RealtimeModel(
@@ -25,96 +30,37 @@ class Assistant(Agent):
                 temperature=config.model["temperature"],
             ),
             tools=get_tools(),
-            mcp_servers=mcp_servers if mcp_servers else None,
+            chat_ctx=chat_ctx,
         )
-
-    def _load_mcp_servers(self) -> list:
-        """Load MCP servers from config with flexible configuration support.
-        
-        Supports two formats:
-        1. Simple URL string: "https://server.com"
-        2. Detailed config object with type, name, tool_configuration, authorization, etc.
-        
-        Example detailed config:
-        {
-          "type": "url",
-          "url": "https://example.com/sse",
-          "name": "example-mcp",
-          "tool_configuration": {
-            "enabled": true,
-            "allowed_tools": ["tool1", "tool2"]
-          },
-          "authorization_token": "YOUR_TOKEN"
-        }
-        """
-        import logging
-        
-        servers = []
-        mcp_config = config.get("mcp_servers", []) or (
-            config.get("mcp", {}).get("servers", [])
-            if isinstance(config.get("mcp", {}), dict)
-            else []
-        )
-        
-        for server_config in mcp_config:
-            try:
-                if isinstance(server_config, str):
-                    # Simple URL string format (backward compatible)
-                    servers.append(mcp.MCPServerHTTP(server_config))
-                    logging.info(f"Loaded MCP server: {server_config}")
-                    
-                elif isinstance(server_config, dict):
-                    # Detailed configuration object
-                    _server_type = server_config.get("type", "url")  # Reserved for future: stdio, sse, etc.
-                    url = server_config.get("url")
-                    name = server_config.get("name", "unnamed-mcp")
-                    
-                    if not url:
-                        logging.warning(f"MCP server config missing 'url': {server_config}")
-                        continue
-                    
-                    # Extract optional configuration
-                    tool_config = server_config.get("tool_configuration", {})
-                    enabled = tool_config.get("enabled", True)
-                    allowed_tools = tool_config.get("allowed_tools", [])
-                    authorization_token = server_config.get("authorization_token")
-                    
-                    # Skip if explicitly disabled
-                    if not enabled:
-                        logging.info(f"Skipping disabled MCP server: {name}")
-                        continue
-                    
-                    # Note: MCPServerHTTP currently only accepts url parameter
-                    # Store metadata for future use when LiveKit supports filtering/auth
-                    server = mcp.MCPServerHTTP(url)
-                    
-                    # Store metadata as attributes for potential future use
-                    server._ana_name = name
-                    server._ana_allowed_tools = allowed_tools
-                    server._ana_auth_token = authorization_token
-                    
-                    servers.append(server)
-                    logging.info(
-                        f"Loaded MCP server: {name} ({url})"
-                        + (f" [filtered: {len(allowed_tools)} tools]" if allowed_tools else "")
-                    )
-                    
-                else:
-                    logging.warning(f"Invalid MCP server config format: {server_config}")
-                    
-            except Exception as e:
-                logging.error(f"Error loading MCP server {server_config}: {e}")
-        
-        return servers
 
 
 async def entrypoint(ctx: agents.JobContext):
     """Main entrypoint for the agent."""
+
     session = AgentSession()
+    user_name = "abivarman"
+
+    # Initialize Mem0 client with custom instructions
+    mem0 = initialize_mem0_client()
+
+    # Load initial memories at startup (optimized for performance)
+    results, memory_str = load_initial_memories(mem0, user_name, count=10)
+
+    # Create initial chat context with loaded memories
+    initial_ctx = create_memory_context(results, user_name, has_mem0=mem0 is not None)
+
+    # Define shutdown hook for saving conversation to Mem0
+    async def save_conversation():
+        """Wrapper for save_conversation_to_mem0."""
+        await save_conversation_to_mem0(session, mem0, user_name, memory_str)
+
+    # Register shutdown callbacks
+    ctx.add_shutdown_callback(save_conversation)
+    ctx.add_shutdown_callback(close_terminal_window)
 
     await session.start(
         room=ctx.room,
-        agent=Assistant(),
+        agent=Assistant(chat_ctx=initial_ctx),
         room_input_options=RoomInputOptions(
             video_enabled=False,
             noise_cancellation=noise_cancellation.BVC(),

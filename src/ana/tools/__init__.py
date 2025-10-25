@@ -12,10 +12,11 @@ from .file_manager import (
     read_file,
 )
 from .hardware import turn_led_off, turn_led_on, turn_led_on_for_duration
+from .memory import get_recent_memories, search_memories
 from .search import open_search, play_video, search_web
 from .system import shutdown_agent
-from .weather import get_weather
 from .time_utils import get_current_date, get_current_time
+from .weather import get_weather
 
 
 class ToolRegistry:
@@ -45,6 +46,8 @@ class ToolRegistry:
             shutdown_agent,
             get_current_date,
             get_current_time,
+            search_memories,
+            get_recent_memories,
         ]
 
     def register(self, tool: Callable):
@@ -96,4 +99,6 @@ __all__ = [
     "shutdown_agent",
     "get_current_date",
     "get_current_time",
+    "search_memories",
+    "get_recent_memories",
 ]

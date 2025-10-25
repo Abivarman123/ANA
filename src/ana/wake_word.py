@@ -55,8 +55,8 @@ class WakeWordDetector:
         # Find keyword path
         if keyword_path is None:
             project_root = Path(__file__).parent.parent.parent
-            keyword_filename = wake_config.get("keyword_path", "Hey-ANA.ppn")
-            keyword_path = project_root / keyword_filename
+            keyword_filename = wake_config.get("keyword_path", "../wake_word/Hey-ANA.ppn")
+            keyword_path = project_root / "wake_word" / keyword_filename
         else:
             keyword_path = Path(keyword_path)
 

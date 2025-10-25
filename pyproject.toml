@@ -13,7 +13,7 @@ dependencies = [
   'livekit-plugins-silero',
   'livekit-plugins-google',
   'livekit-plugins-noise-cancellation',
-  'mem0ai',
+  "mem0ai",
   'duckduckgo-search',
   'langchain_community',
   'requests',

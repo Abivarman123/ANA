@@ -14,8 +14,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+# Add src to path (go up one level from wake_word folder)
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from ana.config import config
 from ana.wake_word import WakeWordDetector
@@ -23,7 +23,7 @@ from ana.wake_word import WakeWordDetector
 
 def setup_logging():
     """Configure logging for the service."""
-    log_dir = Path(__file__).parent / "logs"
+    log_dir = Path(__file__).parent.parent / "logs"
     log_dir.mkdir(exist_ok=True)
 
     log_file = log_dir / "wake_service.log"

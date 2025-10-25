@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 async def get_system_info(
     context: RunContext,  # type: ignore
 ) -> str:
-    """Get comprehensive system information including CPU, RAM, storage, top processes, and software versions.
+    """Get comprehensive system information.
     
     Returns detailed information about:
     - CPU usage and core count
@@ -120,12 +120,10 @@ async def shutdown_agent(
     cleanup_hardware()
 
     async def delayed_shutdown():
-        await asyncio.sleep(1.5)  # Give time for response to be sent
-        
+        await asyncio.sleep(1.5)
         logger.info("Executing shutdown sequence - triggering graceful shutdown")
         
-        # Use the job context to trigger a graceful shutdown
-        # This will run all registered shutdown callbacks:
+        # Trigger graceful shutdown to run all registered callbacks:
         # 1. save_conversation_to_mem0 - saves memories
         # 2. close_terminal_window - closes the terminal
         try:

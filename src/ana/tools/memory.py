@@ -8,7 +8,6 @@ from livekit.agents import AgentSession, ChatContext, function_tool
 from mem0 import MemoryClient
 
 
-# Memory filter prompt for Mem0 configuration
 MEMORY_FILTER_PROMPT = """Extract ONLY long-term, meaningful information. Be highly selective.
 
 EXTRACT:
@@ -44,14 +43,14 @@ def get_mem0_client():
     return MemoryClient(api_key=mem0_api_key)
 
 
-def verify_custom_instructions(mem0):
+def verify_custom_instructions(mem0) -> bool:
     """Verify that custom instructions are properly set.
     
     Args:
         mem0: MemoryClient instance
         
     Returns:
-        bool: True if instructions are set and match expected, False otherwise
+        True if instructions are set and match expected, False otherwise
     """
     if not mem0:
         return False

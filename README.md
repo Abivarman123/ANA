@@ -4,11 +4,11 @@
 
 ## Features
 
-- 🎙️ **Voice**: Real-time voice interaction
-- 🎤 **Wake Word**: Always-on "Hey ANA" voice activation
-- 🧠 **Long‑term Memory**: Persist user context with Mem0 (project-level custom instructions)
+- 🎙️ **Voice Interaction**: Real-time voice conversation with natural turn-taking
+- 🎤 **Wake Word Detection**: Always-on "Hey ANA" voice activation
+- 🧠 **Long-term Memory**: Persistent user context
 - 🧩 **MCP Extensibility**: Add external tool servers dynamically
-- 🔌 **Extensible**: Easy-to-extend modular architecture
+- 🔌 **Modular Architecture**: Easy-to-extend tool system
 - 🌤️ **Weather**: Get current weather for any city
 - 🔍 **Web Search**: Search the web using DuckDuckGo
 - 📧 **Email**: Send emails through Gmail
@@ -21,10 +21,10 @@
 ### Prerequisites
 
 - Python 3.14+
-- uv + ruff (not required, but recommended)
+- [uv](https://docs.astral.sh/uv/) (recommended for dependency management)
 - Gmail account with App Password (for email features)
-- Gemini free API key
-- Picovoice Access Key (free, for wake word detection)
+- [Google Gemini API key](https://aistudio.google.com/) (free tier available)
+- [Picovoice Access Key](https://console.picovoice.ai/) (free, for wake word detection)
 - Arduino (optional, for LED control)
 
 ### Installation
@@ -54,8 +54,6 @@ GMAIL_APP_PASSWORD=gmail app password
 PICOVOICE_KEY=pico voice key
 MEM0_API_KEY=mem0 api key
 ```
-
-Get your free Picovoice key from: https://console.picovoice.ai/
 
 **Note:** Only credentials go in `.env`. All other settings (sensitivity, ports, etc.) are in `config.json`.
 
@@ -99,6 +97,7 @@ Edit `config.json` to customize settings like Arduino port, model parameters, et
 ### Running ANA
 
 #### Standard Mode
+
 ```bash
 # Run the agent
 uv run main.py console
@@ -107,7 +106,8 @@ uv run main.py console
 #### Wake Word Mode (Always-On Voice Activation)
 
 ```bash
-python wake_service.py
+# Run the wake word service
+python wake_word/wake_service.py
 ```
 
 Say **"Hey ANA"** to activate!
@@ -121,6 +121,7 @@ Say **"Hey ANA"** to activate!
   - `config.json`: set `user_name` for per-user memories
 
 Tools related to memory live in `src/ana/tools/memory.py`:
+
 - `search_memories(query, limit)` retrieves relevant past info
 - `get_recent_memories(count)` fetches latest stored facts
 
@@ -157,19 +158,23 @@ ANA/
 ### Voice Commands
 
 **Wake Word:**
+
 - "Hey ANA" - Activates the assistant (when wake word service is running)
 
 **General:**
+
 - "What's the weather in London?"
 - "Search the web for Python tutorials"
 - "Send an email to john@example.com"
 
 **LED Control:**
+
 - "Turn on the LED"
 - "Turn off the LED"
 - "Turn on the LED for 10 seconds"
 
 **File Management:**
+
 - "Create a file called notes.txt with content 'Hello World'"
 - "Read the file notes.txt"
 - "Edit notes.txt and change the content to 'Updated content'"
@@ -177,6 +182,7 @@ ANA/
 - "Delete the file notes.txt"
 
 **System Monitoring:**
+
 - "What's my system status?"
 - "Check RAM usage"
 - "Show me CPU usage"
@@ -184,6 +190,7 @@ ANA/
 - "Which processes are using the most memory?"
 
 **System:**
+
 - "Shut down ANA"
 
 ### Personality

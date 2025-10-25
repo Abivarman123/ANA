@@ -1,7 +1,6 @@
 """Background service for ANA wake word detection.
 
 This script runs continuously in the background, listening for the wake word.
-It can be configured to start automatically on system boot.
 """
 
 import atexit
@@ -14,7 +13,6 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Add src to path (go up one level from wake_word folder)
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from ana.config import config
@@ -65,7 +63,6 @@ def main():
     detector = None
     retry_count = 0
 
-    # Setup graceful shutdown handlers
     def cleanup_handler(signum=None, frame=None):
         """Handle shutdown signals gracefully."""
         logger.info("Shutdown signal received. Cleaning up...")
@@ -74,7 +71,6 @@ def main():
         logger.info("Wake word service stopped cleanly")
         sys.exit(0)
 
-    # Register shutdown handlers
     signal.signal(signal.SIGINT, cleanup_handler)
     signal.signal(signal.SIGTERM, cleanup_handler)
     atexit.register(lambda: cleanup_handler() if detector else None)
@@ -91,7 +87,6 @@ def main():
             logger.info("🎤 Listening for 'Hey ANA'...")
             logger.info("Press Ctrl+C to stop")
 
-            # Start detection (blocking)
             detector.start()
 
         except KeyboardInterrupt:

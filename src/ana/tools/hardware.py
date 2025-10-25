@@ -18,7 +18,7 @@ class ArduinoController:
         self._connection: Optional[serial.Serial] = None
         self._config = config.hardware
         self._last_used = time.time()
-        self._idle_timeout = 300  # Close connection after 5 minutes of inactivity
+        self._idle_timeout = 300  # 5 minutes of inactivity
 
     def get_connection(self) -> serial.Serial:
         """Get or create serial connection to Arduino."""

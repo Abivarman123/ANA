@@ -1,22 +1,22 @@
 [project]
 name = "ANA"
 version = "0.0.1"
-description = "ANA- Advanced Neural Assistant. Inspired by Jarvis from Ironman."
+description = "ANA - Advanced Neural Assistant. Inspired by JARVIS from Iron Man."
 readme = "README.md"
 requires-python = ">=3.14"
 authors = [{ name = "Abivarman", email = "jabivarman@gmail.com" }]
 license = { text = "MIT" }
 dependencies = [
-  'livekit',
-  'livekit-agents[mcp]',
-  'livekit-plugins-openai',
-  'livekit-plugins-silero',
-  'livekit-plugins-google',
-  'livekit-plugins-noise-cancellation',
+  "livekit",
+  "livekit-agents[mcp]",
+  "livekit-plugins-openai",
+  "livekit-plugins-silero",
+  "livekit-plugins-google",
+  "livekit-plugins-noise-cancellation",
   "mem0ai",
-  'duckduckgo-search',
-  'langchain_community',
-  'requests',
+  "duckduckgo-search",
+  "langchain_community",
+  "requests",
   "python-dotenv",
   "google-genai",
   "pipwin>=0.5.2",
@@ -26,7 +26,6 @@ dependencies = [
   "sounddevice>=0.5.3",
   "soundfile>=0.13.1",
   "pyserial>=3.5",
-  "ddgs>=9.6.1",
   "pvporcupine>=3.0.0",
   "psutil>=6.1.0",
   "send2trash>=1.8.3",

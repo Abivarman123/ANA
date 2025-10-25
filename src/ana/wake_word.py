@@ -16,7 +16,6 @@ import sounddevice as sd
 
 logger = logging.getLogger(__name__)
 
-# Track spawned processes for cleanup
 _spawned_processes: Set[subprocess.Popen] = set()
 
 
@@ -46,13 +45,8 @@ class WakeWordDetector:
         self.is_running = False
         self._cleanup_registered = False
 
-        # Get wake word config
         wake_config = config.wake_word
-
-        # Use provided sensitivity or fall back to config
         self.sensitivity = sensitivity if sensitivity is not None else wake_config.get("sensitivity", 0.5)
-
-        # Find keyword path
         if keyword_path is None:
             project_root = Path(__file__).parent.parent.parent
             keyword_filename = wake_config.get("keyword_path", "../wake_word/Hey-ANA.ppn")
@@ -67,7 +61,6 @@ class WakeWordDetector:
         self.porcupine = None
         self.audio_stream = None
         
-        # Register cleanup on exit
         if not self._cleanup_registered:
             atexit.register(self.stop)
             self._cleanup_registered = True
@@ -75,14 +68,12 @@ class WakeWordDetector:
     def start(self):
         """Start listening for wake word."""
         try:
-            # Initialize Porcupine
             self.porcupine = pvporcupine.create(
                 access_key=self.access_key,
                 keyword_paths=[self.keyword_path],
                 sensitivities=[self.sensitivity],
             )
 
-            # Initialize sounddevice stream
             self.audio_stream = sd.InputStream(
                 samplerate=self.porcupine.sample_rate,
                 channels=1,
@@ -94,14 +85,11 @@ class WakeWordDetector:
             self.is_running = True
             print("🎤 Wake word detector started. Say 'Hey ANA' to activate...")
 
-            # Main detection loop
             while self.is_running:
-                # Read audio frame
                 pcm, overflowed = self.audio_stream.read(self.porcupine.frame_length)
                 if overflowed:
                     logger.warning("Audio buffer overflow detected")
                 
-                # Convert to 1D array and process
                 pcm = pcm.flatten()
                 keyword_index = self.porcupine.process(pcm)
 
@@ -193,25 +181,21 @@ class WakeWordDetector:
             print("🚀 Launching ANA...")
 
             if sys.platform == "win32":
-                # Windows: Start in new console window with uv run
-                # Use CREATE_NEW_PROCESS_GROUP to allow independent process lifecycle
                 process = subprocess.Popen(
                     ["cmd", "/c", "start", "cmd", "/k", "uv", "run", "python", str(main_script), "console"],
                     cwd=str(project_root),
                     shell=True,
-                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0,
+                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
                 )
             else:
-                # Unix-like: Start in background
                 process = subprocess.Popen(
                     [sys.executable, str(main_script), "console"],
                     cwd=str(project_root),
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
-                    start_new_session=True,  # Detach from parent process
+                    start_new_session=True,
                 )
             
-            # Track process for potential cleanup
             _spawned_processes.add(process)
 
             # Wait briefly to check if process started successfully

@@ -39,7 +39,8 @@ async def open_search(
         site: Optional - specify where to search (youtube, google, etc.) if query is a search term
     """
     query_lower = query.lower().strip()
-    # Normalize common voice prefixes/suffixes like "open youtube"
+    
+    # Normalize common voice prefixes/suffixes
     cleaned = re.sub(
         r"^(open|go to|goto|visit|launch|start|take me to)\s+", "", query_lower
     ).strip()
@@ -135,16 +136,18 @@ async def play_video(
         - If a direct YouTube video URL is provided, play it.
     """
     try:
-        # Default to search unless there is explicit play intent
         lower_q = query.lower().strip()
+        
+        # Check for explicit play intent
         has_play_intent = any(
-            p in lower_q for p in [
-                "play", "watch", "start playback", "start playing", "resume video", "begin video"
+            keyword in lower_q for keyword in [
+                "play", "watch", "start playback", "start playing", 
+                "resume video", "begin video"
             ]
         )
 
         # If it's a direct YouTube URL, always treat as play intent
-        if ("youtube.com" in lower_q or "youtu.be" in lower_q):
+        if "youtube.com" in lower_q or "youtu.be" in lower_q:
             has_play_intent = True
 
         if not has_play_intent:

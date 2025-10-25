@@ -13,25 +13,18 @@ from send2trash import send2trash
 from ..config import config
 from .base import handle_tool_error
 
-# Constants for safety
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB in bytes
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+
 ALLOWED_EXTENSIONS = {
-    # Text files
     ".txt", ".md", ".json", ".csv", ".log",
-    # Code files
     ".py", ".js", ".html", ".css", ".xml", ".yaml", ".yml",
-    # Documents
     ".pdf", ".doc", ".docx",
-    # Data
     ".sql", ".db",
 }
 
 BLOCKED_EXTENSIONS = {
-    # Executables
     ".exe", ".bat", ".cmd", ".sh", ".ps1", ".msi", ".app", ".dmg",
-    # Scripts that can execute
     ".vbs", ".wsf", ".scr", ".pif", ".com",
-    # System files
     ".sys", ".dll", ".so", ".dylib",
 }
 
@@ -48,8 +41,7 @@ def _get_sandbox_path() -> Path:
 
 
 def _validate_path(file_path: str) -> Path:
-    """
-    Validate and sanitize file path to prevent directory traversal.
+    """Validate and sanitize file path to prevent directory traversal.
     
     Args:
         file_path: User-provided file path
@@ -61,33 +53,25 @@ def _validate_path(file_path: str) -> Path:
         FileManagerError: If path is invalid or outside sandbox
     """
     sandbox = _get_sandbox_path()
-    
-    # Remove any leading/trailing whitespace
     file_path = file_path.strip()
     
-    # Check for directory traversal attempts
     if ".." in file_path or file_path.startswith("/") or file_path.startswith("\\"):
         raise FileManagerError(
             "Invalid path: Directory traversal detected. Paths must be relative to Desktop."
         )
     
-    # Resolve the full path
     full_path = (sandbox / file_path).resolve()
     
-    # Ensure the resolved path is still within sandbox
     try:
         full_path.relative_to(sandbox)
     except ValueError:
-        raise FileManagerError(
-            f"Access denied: Path must be within {sandbox}"
-        )
+        raise FileManagerError(f"Access denied: Path must be within {sandbox}")
     
     return full_path
 
 
 def _validate_extension(file_path: Path) -> None:
-    """
-    Validate file extension for safety.
+    """Validate file extension for safety.
     
     Args:
         file_path: Path object to validate
@@ -97,13 +81,11 @@ def _validate_extension(file_path: Path) -> None:
     """
     extension = file_path.suffix.lower()
     
-    # Check blocked extensions first
     if extension in BLOCKED_EXTENSIONS:
         raise FileManagerError(
             f"Blocked file type: {extension} files are not allowed for security reasons."
         )
     
-    # Check if extension is in allowed list
     if extension and extension not in ALLOWED_EXTENSIONS:
         raise FileManagerError(
             f"Unsupported file type: {extension}. Allowed types: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
@@ -111,8 +93,7 @@ def _validate_extension(file_path: Path) -> None:
 
 
 def _validate_file_size(file_path: Path) -> None:
-    """
-    Validate file size doesn't exceed maximum.
+    """Validate file size doesn't exceed maximum.
     
     Args:
         file_path: Path to file to check
@@ -131,8 +112,7 @@ def _validate_file_size(file_path: Path) -> None:
 
 
 def _validate_content_size(content: str) -> None:
-    """
-    Validate content size before writing.
+    """Validate content size before writing.
     
     Args:
         content: Content to validate

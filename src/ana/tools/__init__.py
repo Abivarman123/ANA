@@ -3,6 +3,7 @@
 from typing import Callable, List
 
 from .email import send_email
+from .timers import cancel_timer, list_active_timers, set_timer
 from .file_manager import (
     create_file,
     delete_file,
@@ -11,7 +12,15 @@ from .file_manager import (
     list_files,
     read_file,
 )
-from .hardware import turn_led_off, turn_led_on, turn_led_on_for_duration
+from .hardware import (
+    close_door,
+    open_door,
+    turn_fan_off,
+    turn_fan_on,
+    turn_led_off,
+    turn_led_on,
+    turn_led_on_for_duration,
+)
 from .memory import get_recent_memories, search_memories
 from .search import open_search, play_video, search_web
 from .system import get_system_info, shutdown_agent
@@ -37,6 +46,10 @@ class ToolRegistry:
             turn_led_on,
             turn_led_off,
             turn_led_on_for_duration,
+            turn_fan_on,
+            turn_fan_off,
+            open_door,
+            close_door,
             create_file,
             read_file,
             edit_file,
@@ -49,6 +62,9 @@ class ToolRegistry:
             get_current_time,
             search_memories,
             get_recent_memories,
+            set_timer,
+            cancel_timer,
+            list_active_timers,
         ]
 
     def register(self, tool: Callable):
@@ -91,6 +107,10 @@ __all__ = [
     "turn_led_on",
     "turn_led_off",
     "turn_led_on_for_duration",
+    "turn_fan_on",
+    "turn_fan_off",
+    "open_door",
+    "close_door",
     "create_file",
     "read_file",
     "edit_file",
@@ -103,4 +123,7 @@ __all__ = [
     "get_current_time",
     "search_memories",
     "get_recent_memories",
+    "set_timer",
+    "cancel_timer",
+    "list_active_timers",
 ]

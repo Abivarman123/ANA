@@ -125,15 +125,14 @@ async def play_video(
     context: RunContext,  # type: ignore
     query: str,
 ) -> str:
-    """Play a YouTube video only when explicitly asked to play or watch.
+    """Play a YouTube video when explicitly asked to play or watch.
 
     Args:
-        query: Video search query or a YouTube URL.
+        query: a YouTube URL.
 
     Behavior:
-        - If the user explicitly says to "play" or "watch", open the first video result.
-        - If there is no explicit play intent, open YouTube search results instead.
-        - If a direct YouTube video URL is provided, play it.
+        - If the user says to "play" or "watch", open the first video result.
+        - NEVER show search results when the user has play/watch intent.
     """
     try:
         lower_q = query.lower().strip()

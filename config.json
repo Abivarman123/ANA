@@ -6,7 +6,8 @@
   "hardware": {
     "serial_port": "COM8",
     "baud_rate": 9600,
-    "timeout": 1
+    "timeout": 1,
+    "pir_monitoring_enabled": true
   },
   "model": {
     "model_name": "gemini-2.5-flash-native-audio-preview-09-2025",

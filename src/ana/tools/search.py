@@ -33,6 +33,9 @@ async def open_search(
     site: str = "",
 ) -> str:
     """Open Chrome with a URL, domain, or search query.
+    
+    DO NOT use this tool if the user wants to PLAY or WATCH a video/music.
+    Use play_video or play_music tools instead for playback intent.
 
     Args:
         query: Can be a full URL (https://...), domain (youtube.com), or search query
@@ -81,17 +84,8 @@ async def open_search(
             # 3) It's a search query - determine where to search
             encoded_query = quote_plus(query)
             site_lower = site.lower() if site else ""
-            # Check if query itself indicates where to search
-            if not site_lower:
-                if any(word in query_lower for word in ["youtube", "video"]):
-                    site_lower = "youtube"
-                elif any(word in query_lower for word in ["reddit", "subreddit"]):
-                    site_lower = "reddit"
-                elif any(
-                    word in query_lower for word in ["github", "repository", "repo"]
-                ):
-                    site_lower = "github"
-            # Build search URL based on site
+            
+            # Build search URL based on site parameter (don't auto-detect)
             if "youtube" in site_lower:
                 url = f"https://www.youtube.com/results?search_query={encoded_query}"
             elif "amazon" in site_lower:
@@ -125,67 +119,60 @@ async def play_video(
     context: RunContext,  # type: ignore
     query: str,
 ) -> str:
-    """Play a YouTube video when explicitly asked to play or watch.
+    """Play a YouTube video directly - opens and auto-plays the video.
+    
+    Use this tool when user explicitly wants to PLAY, WATCH, or START a video.
+    Examples: "play [video name]", "watch [video]", "start playing [video]"
+    
+    NOTE: For music/songs, use play_music tool instead.
 
     Args:
-        query: a YouTube URL.
-
-    Behavior:
-        - If the user says to "play" or "watch", open the first video result.
-        - NEVER show search results when the user has play/watch intent.
+        query: Video name/search term OR direct YouTube URL
     """
     try:
-        lower_q = query.lower().strip()
+        query_lower = query.lower()
         
-        # Check for explicit play intent
-        has_play_intent = any(
-            keyword in lower_q for keyword in [
-                "play", "watch", "start playback", "start playing", 
-                "resume video", "begin video"
-            ]
-        )
-
-        # If it's a direct YouTube URL, always treat as play intent
-        if "youtube.com" in lower_q or "youtu.be" in lower_q:
-            has_play_intent = True
-
-        if not has_play_intent:
-            # Open search results on YouTube without auto-playing
-            encoded_query = quote_plus(query)
-            url = f"https://www.youtube.com/results?search_query={encoded_query}"
-            action = f"Opened search results for '{query}'"
+        # Detect if this is actually a music request
+        music_keywords = [
+            "song", "music", "album", "artist", "track", "playlist"
+        ]
+        
+        # If music intent detected, redirect to YouTube Music
+        if any(keyword in query_lower for keyword in music_keywords):
+            logging.info("Music intent detected in play_video, redirecting to YouTube Music")
+            return await play_music(context, query)
+        
+        # If it's already a YouTube URL, use it directly
+        if "youtube.com" in query or "youtu.be" in query:
+            url = query if query.startswith("http") else f"https://{query}"
+            action = "Playing video"
         else:
-            # Explicit play intent
-            if "youtube.com" in query or "youtu.be" in query:
-                url = query if query.startswith("http") else f"https://{query}"
-                action = "Playing video"
+            # Search YouTube and get first video
+            encoded_query = quote_plus(query)
+            search_url = f"https://www.youtube.com/results?search_query={encoded_query}"
+
+            # Fetch search results page
+            async with aiohttp.ClientSession() as session:
+                async with session.get(search_url) as response:
+                    html = await response.text()
+
+            # Extract first video ID using regex
+            video_id_match = re.search(r'"videoId":"([^\"]{11})"', html)
+
+            if video_id_match:
+                video_id = video_id_match.group(1)
+                url = f"https://www.youtube.com/watch?v={video_id}"
+                action = f"Playing '{query}'"
             else:
-                # Search YouTube and get first video
-                encoded_query = quote_plus(query)
-                search_url = f"https://www.youtube.com/results?search_query={encoded_query}"
-
-                # Fetch search results page
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(search_url) as response:
-                        html = await response.text()
-
-                # Extract first video ID using regex
-                video_id_match = re.search(r'"videoId":"([^\"]{11})"', html)
-
-                if video_id_match:
-                    video_id = video_id_match.group(1)
-                    url = f"https://www.youtube.com/watch?v={video_id}"
-                    action = f"Playing first result for '{query}'"
-                else:
-                    # Fallback to search results if can't find video
-                    url = search_url
-                    action = f"Opened search results for '{query}'"
+                # Fallback to search results if can't find video
+                url = search_url
+                action = f"Could not find video, showing search results for '{query}'"
 
         # Open in Chrome
         chrome_path = "C:/Program Files/Google/Chrome/Application/chrome.exe"
         subprocess.Popen([chrome_path, url])
         logging.info(f"Playing video: {url}")
-        return f"✓ {action} in Chrome"
+        return f"✓ {action}"
 
     except FileNotFoundError:
         # Fallback to default browser
@@ -198,4 +185,66 @@ async def play_video(
         encoded_query = quote_plus(query)
         fallback_url = f"https://www.youtube.com/results?search_query={encoded_query}"
         webbrowser.open(fallback_url)
-        return f"✓ Opened YouTube search for '{query}'"
+        return f"⚠ Error occurred, opened YouTube search for '{query}'"
+
+
+@function_tool()
+@handle_tool_error("play_music")
+async def play_music(
+    context: RunContext,  # type: ignore
+    query: str,
+) -> str:
+    """Play music on YouTube Music - opens and auto-plays the song/album/playlist.
+    
+    Use this tool when user wants to PLAY music/songs on YouTube Music.
+    Examples: "play [song name]", "play music by [artist]", "play [playlist]"
+
+    Args:
+        query: Song/artist/album name OR direct YouTube Music URL
+    """
+    try:
+        # If it's already a YouTube Music URL, use it directly
+        if "music.youtube.com" in query:
+            url = query if query.startswith("http") else f"https://{query}"
+            action = "Playing music"
+        else:
+            # Search YouTube Music and get first result
+            encoded_query = quote_plus(query)
+            search_url = f"https://music.youtube.com/search?q={encoded_query}"
+
+            # Fetch search results page
+            async with aiohttp.ClientSession() as session:
+                async with session.get(search_url) as response:
+                    html = await response.text()
+
+            # Extract first video ID from YouTube Music
+            # YouTube Music uses different patterns, try multiple
+            video_id_match = re.search(r'"videoId":"([^\"]{11})"', html)
+            
+            if video_id_match:
+                video_id = video_id_match.group(1)
+                url = f"https://music.youtube.com/watch?v={video_id}"
+                action = f"Playing '{query}' on YouTube Music"
+            else:
+                # Fallback to search results if can't find song
+                url = search_url
+                action = f"Could not find song, showing YouTube Music search for '{query}'"
+
+        # Open in Chrome
+        chrome_path = "C:/Program Files/Google/Chrome/Application/chrome.exe"
+        subprocess.Popen([chrome_path, url])
+        logging.info(f"Playing music: {url}")
+        return f"✓ {action}"
+
+    except FileNotFoundError:
+        # Fallback to default browser
+        webbrowser.open(url)
+        logging.info(f"Playing music in default browser: {url}")
+        return f"✓ {action} in default browser"
+    except Exception as e:
+        logging.error(f"Error playing music: {e}")
+        # Fallback to search results
+        encoded_query = quote_plus(query)
+        fallback_url = f"https://music.youtube.com/search?q={encoded_query}"
+        webbrowser.open(fallback_url)
+        return f"⚠ Error occurred, opened YouTube Music search for '{query}'"

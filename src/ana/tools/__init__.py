@@ -25,6 +25,7 @@ from .memory import get_recent_memories, search_memories
 from .search import open_search, play_video, search_web
 from .system import get_system_info, shutdown_agent
 from .time_utils import get_current_date, get_current_time
+from .countdown import countdown
 from .weather import get_weather
 
 
@@ -65,6 +66,7 @@ class ToolRegistry:
             set_timer,
             cancel_timer,
             list_active_timers,
+            countdown,
         ]
 
     def register(self, tool: Callable):
@@ -126,4 +128,5 @@ __all__ = [
     "set_timer",
     "cancel_timer",
     "list_active_timers",
+    "countdown",
 ]

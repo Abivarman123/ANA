@@ -2,7 +2,6 @@
 
 import atexit
 import logging
-import threading
 import time
 from typing import Optional
 
@@ -10,7 +9,6 @@ import serial
 from livekit.agents import RunContext, function_tool
 
 from ..config import config
-from ..event_manager import Event, EventType, event_manager
 
 
 class ArduinoController:
@@ -21,8 +19,6 @@ class ArduinoController:
         self._config = config.hardware
         self._last_used = time.time()
         self._idle_timeout = 300  # 5 minutes
-        self._pir_monitor_thread: Optional[threading.Thread] = None
-        self._pir_monitor_running = False
         self._available = False  # <- track availability
         self._last_error_log = 0  # <- prevent spam (log every N sec)
         self._error_cooldown = 60  # seconds between identical error logs
@@ -82,58 +78,8 @@ class ArduinoController:
             else response
         )
 
-    def start_pir_monitoring(self, auto_start: bool = False):
-        """Start monitoring PIR sensor events from Arduino."""
-        if auto_start and not self._config.get("pir_monitoring_enabled", False):
-            return
-        if self._pir_monitor_running:
-            logging.warning("PIR monitoring already running")
-            return
-
-        self._pir_monitor_running = True
-
-        def monitor_pir():
-            """Monitor Arduino serial for PIR events."""
-            logging.info("PIR monitoring started")
-            while self._pir_monitor_running:
-                try:
-                    conn = self.get_connection()
-                    if not conn or not self._available:
-                        time.sleep(2)
-                        continue
-                    if conn.in_waiting:
-                        line = conn.readline().decode().strip()
-                        if line == "EVENT:PERSON_AT_DOOR":
-                            event = Event(
-                                event_type=EventType.SENSOR,
-                                message="Someone is at your door!",
-                                data={"sensor": "pir", "location": "front_door"},
-                            )
-                            event_manager.add_event(event)
-                            logging.info("PIR event detected")
-                    time.sleep(0.1)
-                except Exception as e:
-                    if time.time() - self._last_error_log > self._error_cooldown:
-                        logging.warning(f"PIR monitoring error: {e}")
-                        self._last_error_log = time.time()
-                    time.sleep(2)
-
-            logging.info("PIR monitoring stopped")
-
-        self._pir_monitor_thread = threading.Thread(target=monitor_pir, daemon=True)
-        self._pir_monitor_thread.start()
-        logging.info("PIR monitoring thread started")
-
-    def stop_pir_monitoring(self):
-        """Stop PIR monitoring."""
-        self._pir_monitor_running = False
-        if self._pir_monitor_thread:
-            self._pir_monitor_thread.join(timeout=2)
-            self._pir_monitor_thread = None
-
     def close(self):
         """Close the serial connection."""
-        self.stop_pir_monitoring()
         if self._connection and self._connection.is_open:
             logging.info("Closing Arduino connection")
             self._connection.close()
@@ -189,10 +135,6 @@ async def open_door(context: RunContext) -> str:
 @function_tool()
 async def close_door(context: RunContext) -> str:
     return _arduino._format_response(_arduino.send_command("8:CLOSE"), "Door closed")
-
-
-def start_pir_monitoring_if_enabled():
-    _arduino.start_pir_monitoring(auto_start=True)
 
 
 def cleanup_hardware():

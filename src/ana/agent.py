@@ -1,17 +1,13 @@
 """Main agent implementation for ANA."""
 
-import asyncio
-
 from google.genai import types
 from livekit import agents
 from livekit.agents import Agent, AgentSession, RoomInputOptions
 from livekit.plugins import google, noise_cancellation
 
 from .config import config
-from .event_manager import event_manager
 from .prompts import AGENT_INSTRUCTION, SESSION_INSTRUCTION
 from .tools import get_tools
-from .tools.hardware import start_pir_monitoring_if_enabled
 from .tools.memory import (
     create_memory_context,
     initialize_mem0_client,
@@ -40,6 +36,7 @@ class Assistant(Agent):
 
 async def entrypoint(ctx: agents.JobContext):
     """Main entrypoint for the agent."""
+    # Use default AgentSession with Gemini's built-in VAD
     session = AgentSession()
     user_name = config.get("user_name")
 
@@ -65,38 +62,17 @@ async def entrypoint(ctx: agents.JobContext):
     ctx.add_shutdown_callback(save_conversation)
     ctx.add_shutdown_callback(close_terminal_window)
 
-    # Start PIR monitoring if enabled in config
-    start_pir_monitoring_if_enabled()
-
     await session.start(
         room=ctx.room,
         agent=Assistant(chat_ctx=initial_ctx),
         room_input_options=RoomInputOptions(
-            video_enabled=True,
+            video_enabled=False,
             audio_enabled=True,
             noise_cancellation=noise_cancellation.BVC(),
         ),
     )
 
     await ctx.connect()
-
-    # Start background event checker
-    async def check_events():
-        """Check for background events and notify the agent."""
-        while ctx.room.connection_state == "connected":
-            await asyncio.sleep(2)  # Check every 2 seconds
-            
-            if event_manager.has_pending_events():
-                events = event_manager.get_pending_events()
-                for event in events:
-                    # Inject event as a system message
-                    agents.logger.info(f"Background event: {event.message}")
-                    await session.generate_reply(
-                        instructions=f"BACKGROUND EVENT: {event.message}. Alert the user about this immediately.",
-                    )
-
-    # Start event checker in background
-    asyncio.create_task(check_events())
 
     await session.generate_reply(
         instructions=SESSION_INSTRUCTION,

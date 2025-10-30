@@ -3,7 +3,6 @@
 from typing import Callable, List
 
 from .email import send_email
-from .timers import cancel_timer, list_active_timers, set_timer
 from .file_manager import (
     create_file,
     delete_file,
@@ -63,9 +62,6 @@ class ToolRegistry:
             get_current_time,
             search_memories,
             get_recent_memories,
-            set_timer,
-            cancel_timer,
-            list_active_timers,
             countdown,
         ]
 
@@ -125,8 +121,5 @@ __all__ = [
     "get_current_time",
     "search_memories",
     "get_recent_memories",
-    "set_timer",
-    "cancel_timer",
-    "list_active_timers",
     "countdown",
 ]

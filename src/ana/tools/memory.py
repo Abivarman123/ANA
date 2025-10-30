@@ -7,7 +7,6 @@ import os
 from livekit.agents import AgentSession, ChatContext, function_tool
 from mem0 import MemoryClient
 
-
 MEMORY_FILTER_PROMPT = """Extract ONLY long-term, meaningful information. Be highly selective.
 
 EXTRACT:
@@ -45,39 +44,43 @@ def get_mem0_client():
 
 def verify_custom_instructions(mem0) -> bool:
     """Verify that custom instructions are properly set.
-    
+
     Args:
         mem0: MemoryClient instance
-        
+
     Returns:
         True if instructions are set and match expected, False otherwise
     """
     if not mem0:
         return False
-        
+
     try:
         project_info = mem0.project.get(fields=["custom_instructions"])
         if not project_info or "custom_instructions" not in project_info:
             logging.warning("⚠ No custom instructions found in project")
             return False
-            
+
         current_instructions = project_info["custom_instructions"]
         if not current_instructions:
             logging.warning("⚠ Custom instructions are empty")
             return False
-            
+
         # Check if our key phrases are present
         key_phrases = ["STRICT EXCLUSIONS", "DO NOT STORE", "routine commands"]
         matches = sum(1 for phrase in key_phrases if phrase in current_instructions)
-        
+
         if matches >= 2:
-            logging.info(f"✓ Custom instructions verified ({len(current_instructions)} chars)")
+            logging.info(
+                f"✓ Custom instructions verified ({len(current_instructions)} chars)"
+            )
             return True
         else:
             logging.warning("⚠ Custom instructions may be outdated or incorrect")
-            logging.debug(f"Current instructions preview: {current_instructions[:200]}...")
+            logging.debug(
+                f"Current instructions preview: {current_instructions[:200]}..."
+            )
             return False
-            
+
     except Exception as e:
         logging.error(f"Failed to verify custom instructions: {e}")
         return False
@@ -208,7 +211,7 @@ async def get_recent_memories(
 
 def initialize_mem0_client():
     """Initialize Mem0 client with custom instructions.
-    
+
     Returns:
         MemoryClient or None: Initialized client or None if API key not available
     """
@@ -227,31 +230,38 @@ def initialize_mem0_client():
         logging.info("Setting custom instructions for Mem0 project...")
         mem0.project.update(custom_instructions=MEMORY_FILTER_PROMPT)
         logging.info("✓ Custom instructions updated")
-        
+
         # Verify the instructions were set correctly
         if not verify_custom_instructions(mem0):
-            logging.warning("⚠ Custom instructions verification failed - memories may not be filtered correctly")
-            logging.warning("Consider checking your mem0 project settings at https://app.mem0.ai")
-            
+            logging.warning(
+                "⚠ Custom instructions verification failed - memories may not be filtered correctly"
+            )
+            logging.warning(
+                "Consider checking your mem0 project settings at https://app.mem0.ai"
+            )
+
     except Exception as e:
         logging.error(f"Failed to set custom instructions for Mem0: {e}")
         import traceback
+
         logging.error(traceback.format_exc())
         logging.error("⚠ Memories will be stored WITHOUT custom filtering!")
 
     logging.info("Mem0 client initialized successfully.")
-    logging.info("Note: Custom instructions only apply to NEW memories added after this point")
+    logging.info(
+        "Note: Custom instructions only apply to NEW memories added after this point"
+    )
     return mem0
 
 
 def load_initial_memories(mem0, user_name: str = "abivarman", count: int = 10):
     """Load initial memories at startup.
-    
+
     Args:
         mem0: MemoryClient instance
         user_name: User ID for memory retrieval
         count: Number of recent memories to load (default: 10)
-    
+
     Returns:
         tuple: (results list, memory_str for filtering)
     """
@@ -263,7 +273,7 @@ def load_initial_memories(mem0, user_name: str = "abivarman", count: int = 10):
         response = mem0.get_all(
             filters={"user_id": user_name},
             page=1,
-            page_size=count  # Only load specified number of memories at startup
+            page_size=count,  # Only load specified number of memories at startup
         )
         logging.info(f"Mem0 response type: {type(response)}")
 
@@ -271,7 +281,9 @@ def load_initial_memories(mem0, user_name: str = "abivarman", count: int = 10):
         if isinstance(response, dict):
             results = response.get("results", [])
             total_count = response.get("count", len(results))
-            logging.info(f"Loaded {len(results)} of {total_count} total memories at startup")
+            logging.info(
+                f"Loaded {len(results)} of {total_count} total memories at startup"
+            )
         elif isinstance(response, list):
             results = response
             logging.info(f"Loaded {len(results)} memories at startup")
@@ -295,18 +307,19 @@ def load_initial_memories(mem0, user_name: str = "abivarman", count: int = 10):
     except Exception as e:
         logging.error(f"Failed to retrieve memories from Mem0: {e}")
         import traceback
+
         logging.error(traceback.format_exc())
         return [], ""
 
 
 def create_memory_context(results, user_name: str = "abivarman", has_mem0: bool = True):
     """Create initial chat context with loaded memories.
-    
+
     Args:
         results: List of memory results from Mem0
         user_name: User's name
         has_mem0: Whether Mem0 client is available
-    
+
     Returns:
         ChatContext: Initial context with memory information
     """
@@ -317,12 +330,12 @@ def create_memory_context(results, user_name: str = "abivarman", has_mem0: bool 
             {"memory": result["memory"], "updated_at": result.get("updated_at", "")}
             for result in results
         ]
-        
+
         # Inform the agent about available memories and tools
         memory_context = f"The user's name is {user_name}. Here are the {len(memories)} most recent memories about him: {json.dumps(memories)}."
         if has_mem0:
             memory_context += " Use search_memories() or get_recent_memories() tools to retrieve additional context when needed."
-        
+
         initial_ctx.add_message(
             role="assistant",
             content=memory_context,
@@ -331,9 +344,11 @@ def create_memory_context(results, user_name: str = "abivarman", has_mem0: bool 
     return initial_ctx
 
 
-async def save_conversation_to_mem0(session: AgentSession, mem0, user_name: str = "abivarman", memory_str: str = ""):
+async def save_conversation_to_mem0(
+    session: AgentSession, mem0, user_name: str = "abivarman", memory_str: str = ""
+):
     """Save conversation context to Mem0 on shutdown (single batch operation).
-    
+
     Args:
         session: AgentSession instance with conversation history
         mem0: MemoryClient instance
@@ -378,16 +393,21 @@ async def save_conversation_to_mem0(session: AgentSession, mem0, user_name: str 
 
     if messages_formatted:
         logging.info(f"Preparing to save {len(messages_formatted)} messages to memory")
-        logging.debug(f"Messages preview: {messages_formatted[:2] if len(messages_formatted) > 2 else messages_formatted}")
-        
+        logging.debug(
+            f"Messages preview: {messages_formatted[:2] if len(messages_formatted) > 2 else messages_formatted}"
+        )
+
         try:
             # Single API call to save all conversation messages
             result = mem0.add(messages_formatted, user_id=user_name)
-            logging.info(f"✓ Chat context saved to memory ({len(messages_formatted)} messages)")
+            logging.info(
+                f"✓ Chat context saved to memory ({len(messages_formatted)} messages)"
+            )
             logging.debug(f"Mem0 add result: {result}")
         except Exception as e:
             logging.error(f"Failed to save conversation to mem0: {e}")
             import traceback
+
             logging.error(traceback.format_exc())
     else:
         logging.info("No messages to save to memory")

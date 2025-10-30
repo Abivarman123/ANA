@@ -1,16 +1,18 @@
+[tool.uv]
+environments = ["sys_platform == 'win32'"]
+
 [project]
 name = "ANA"
 version = "0.0.1"
 description = "ANA - Advanced Neural Assistant. Inspired by JARVIS from Iron Man."
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 authors = [{ name = "Abivarman", email = "jabivarman@gmail.com" }]
 license = { text = "MIT" }
 dependencies = [
   "livekit",
-  "livekit-agents[mcp]",
+  "livekit-agents",
   "livekit-plugins-openai",
-  "livekit-plugins-silero",
   "livekit-plugins-google",
   "livekit-plugins-noise-cancellation",
   "mem0ai",
@@ -30,4 +32,5 @@ dependencies = [
   "psutil>=6.1.0",
   "send2trash>=1.8.3",
   "aiohttp>=3.9.0",
+  "blingfire>=0.1.8",
 ]

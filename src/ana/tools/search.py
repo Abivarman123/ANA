@@ -7,7 +7,6 @@ import webbrowser
 from urllib.parse import quote_plus
 
 import aiohttp
-from langchain_community.tools import DuckDuckGoSearchRun
 from livekit.agents import RunContext, function_tool
 
 from .base import handle_tool_error
@@ -20,8 +19,15 @@ async def search_web(
     query: str,
 ) -> str:
     """Search the web using DuckDuckGo."""
-    results = DuckDuckGoSearchRun().run(tool_input=query)
-    logging.info(f"Search results for '{query}': {results}")
+    # Lazy import - only load when actually searching
+    from langchain_community.tools import DuckDuckGoSearchRun
+    import asyncio
+    
+    # Run blocking search in executor to avoid blocking event loop
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(
+        None, lambda: DuckDuckGoSearchRun().run(tool_input=query)
+    )
     return results
 
 

@@ -28,8 +28,6 @@ async def get_system_info(
     - Top 5 processes by memory usage
     - Operating system and Python version
     """
-    logger.info("System info tool called")
-    
     try:
         info_parts = []
         
@@ -101,9 +99,7 @@ async def get_system_info(
         info_parts.append(f"Bytes Sent: {net_io.bytes_sent / (1024**3):.2f} GB")
         info_parts.append(f"Bytes Received: {net_io.bytes_recv / (1024**3):.2f} GB")
         
-        result = "\n".join(info_parts)
-        logger.info("System info retrieved successfully")
-        return result
+        return "\n".join(info_parts)
         
     except Exception as e:
         error_msg = f"Error retrieving system information: {str(e)}"
@@ -116,24 +112,19 @@ async def shutdown_agent(
     context: RunContext,  # type: ignore
 ) -> str:
     """Shut down the agent and close the terminal window."""
-    logger.info("Shutdown agent tool called")
     cleanup_hardware()
 
     async def delayed_shutdown():
         await asyncio.sleep(1.5)
-        logger.info("Executing shutdown sequence - triggering graceful shutdown")
         
         # Trigger graceful shutdown to run all registered callbacks:
         # 1. save_conversation_to_mem0 - saves memories
         # 2. close_terminal_window - closes the terminal
         try:
             job_ctx = get_job_context()
-            logger.info("Calling ctx.shutdown() for graceful shutdown")
             job_ctx.shutdown(reason="User requested shutdown")
-            # Callbacks will handle everything including terminal closing
         except Exception as e:
             logger.error(f"Could not trigger graceful shutdown: {e}")
-            logger.info("Falling back to direct exit")
             os._exit(0)
 
     asyncio.create_task(delayed_shutdown())
@@ -145,11 +136,7 @@ async def close_terminal_window():
     if sys.platform != "win32":
         return
 
-    logging.info("Closing terminal window...")
-
     try:
-        import psutil
-
         current_pid = os.getpid()
         current_process = psutil.Process(current_pid)
 
@@ -168,7 +155,6 @@ async def close_terminal_window():
                 # Found the CMD window
                 if "cmd.exe" in parent_name:
                     cmd_pid = parent.pid
-                    logging.info(f"Found CMD window: PID {cmd_pid}")
                     break
 
                 process = parent
@@ -177,19 +163,15 @@ async def close_terminal_window():
 
         # Kill the CMD window if found
         if cmd_pid:
-            logging.info(f"Killing CMD window: {cmd_pid}")
             subprocess.run(
                 f"taskkill /F /PID {cmd_pid}",
                 shell=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            # Give taskkill a moment to execute, then force exit
             await asyncio.sleep(0.3)
-            logging.info("Forcing process exit...")
             os._exit(0)
         else:
-            logging.info("CMD window not found, exiting normally")
             os._exit(0)
 
     except Exception as e:

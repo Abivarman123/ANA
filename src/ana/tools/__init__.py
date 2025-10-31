@@ -29,14 +29,17 @@ from .weather import get_weather
 
 
 class ToolRegistry:
-    """Registry for managing agent tools."""
+    """Registry for managing agent tools with caching."""
 
     def __init__(self):
         self._tools: List[Callable] = []
-        self._register_default_tools()
+        self._cached = False
 
     def _register_default_tools(self):
-        """Register default tools."""
+        """Register default tools (cached after first call)."""
+        if self._cached:
+            return
+        
         self._tools = [
             get_weather,
             search_web,
@@ -64,6 +67,7 @@ class ToolRegistry:
             get_recent_memories,
             countdown,
         ]
+        self._cached = True
 
     def register(self, tool: Callable):
         """Register a new tool."""
@@ -77,6 +81,8 @@ class ToolRegistry:
 
     def get_all(self) -> List[Callable]:
         """Get all registered tools."""
+        if not self._cached:
+            self._register_default_tools()
         return self._tools.copy()
 
     def clear(self):

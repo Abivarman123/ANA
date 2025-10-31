@@ -1,5 +1,6 @@
 """Email-related tools."""
 
+import asyncio
 import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -51,23 +52,29 @@ async def send_email(
     # Attach message body
     msg.attach(MIMEText(message, "plain"))
 
-    try:
-        # Connect to Gmail SMTP server
-        server = smtplib.SMTP(email_config["smtp_server"], email_config["smtp_port"])
-        server.starttls()
-        server.login(email_config["user"], email_config["password"])
+    def _send_email_blocking():
+        """Blocking email send operation to run in executor."""
+        try:
+            # Connect to Gmail SMTP server
+            server = smtplib.SMTP(email_config["smtp_server"], email_config["smtp_port"])
+            server.starttls()
+            server.login(email_config["user"], email_config["password"])
 
-        # Send email
-        text = msg.as_string()
-        server.sendmail(email_config["user"], recipients, text)
-        server.quit()
+            # Send email
+            text = msg.as_string()
+            server.sendmail(email_config["user"], recipients, text)
+            server.quit()
 
-        logging.info(f"Email sent successfully to {to_email}")
-        return f"Email sent successfully to {to_email}"
+            logging.info(f"Email sent successfully to {to_email}")
+            return f"Email sent successfully to {to_email}"
 
-    except smtplib.SMTPAuthenticationError:
-        logging.error("Gmail authentication failed")
-        return "Email sending failed: Authentication error. Please check your Gmail credentials."
-    except smtplib.SMTPException as e:
-        logging.error(f"SMTP error occurred: {e}")
-        return f"Email sending failed: SMTP error - {str(e)}"
+        except smtplib.SMTPAuthenticationError:
+            logging.error("Gmail authentication failed")
+            return "Email sending failed: Authentication error. Please check your Gmail credentials."
+        except smtplib.SMTPException as e:
+            logging.error(f"SMTP error occurred: {e}")
+            return f"Email sending failed: SMTP error - {str(e)}"
+
+    # Run blocking SMTP operations in executor
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _send_email_blocking)

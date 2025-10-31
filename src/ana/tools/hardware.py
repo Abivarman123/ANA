@@ -1,5 +1,6 @@
 """Hardware control tools (Arduino, LED, etc.)."""
 
+import asyncio
 import atexit
 import logging
 import time
@@ -19,11 +20,10 @@ class ArduinoController:
         self._config = config.hardware
         self._last_used = time.time()
         self._idle_timeout = 300  # 5 minutes
-        self._available = False  # <- track availability
-        self._last_error_log = 0  # <- prevent spam (log every N sec)
-        self._error_cooldown = 60  # seconds between identical error logs
+        self._available = False
+        self._error_logged = False  # Only log connection error once per session
 
-    def get_connection(self) -> Optional[serial.Serial]:
+    async def get_connection(self) -> Optional[serial.Serial]:
         """Get or create serial connection to Arduino if available."""
         # Close idle connection
         if self._connection and self._connection.is_open:
@@ -34,35 +34,46 @@ class ArduinoController:
 
         if self._connection is None or not self._connection.is_open:
             try:
-                self._connection = serial.Serial(
-                    self._config["serial_port"],
-                    self._config["baud_rate"],
-                    timeout=self._config["timeout"],
+                # Run blocking serial connection in executor to avoid blocking event loop
+                loop = asyncio.get_event_loop()
+                self._connection = await loop.run_in_executor(
+                    None,
+                    lambda: serial.Serial(
+                        self._config["serial_port"],
+                        self._config["baud_rate"],
+                        timeout=self._config["timeout"],
+                    ),
                 )
-                time.sleep(2)
+                # Use async sleep instead of blocking
+                await asyncio.sleep(2)
                 self._available = True
+                self._error_logged = False  # Reset on successful connection
                 logging.info("✅ Arduino connection established")
             except Exception as e:
-                # Avoid spamming error messages
-                now = time.time()
-                if now - self._last_error_log > self._error_cooldown:
+                # Only log once per session to avoid spam
+                if not self._error_logged:
                     logging.warning(f"⚠️ Arduino not connected: {e}")
-                    self._last_error_log = now
+                    self._error_logged = True
                 self._available = False
                 return None
 
         self._last_used = time.time()
         return self._connection
 
-    def send_command(self, command: str) -> str:
+    async def send_command(self, command: str) -> str:
         """Send command to Arduino and return response or skip if unavailable."""
-        conn = self.get_connection()
+        conn = await self.get_connection()
         if not conn or not self._available:
             return "⚠️ Arduino not connected"
         try:
-            conn.write(f"{command}\n".encode())
-            time.sleep(0.1)
-            return conn.readline().decode().strip() if conn.in_waiting else "OK"
+            # Run blocking I/O in executor
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, lambda: conn.write(f"{command}\n".encode()))
+            await asyncio.sleep(0.1)
+            response = await loop.run_in_executor(
+                None, lambda: conn.readline().decode().strip() if conn.in_waiting else "OK"
+            )
+            return response
         except Exception as e:
             logging.error(f"Arduino command error: {e}")
             self._available = False
@@ -99,45 +110,52 @@ atexit.register(_arduino.close)
 # --- Tools --- #
 @function_tool()
 async def turn_led_on(context: RunContext) -> str:
-    return _arduino._format_response(_arduino.send_command("12:ON"), "LED turned ON")
+    response = await _arduino.send_command("12:ON")
+    return _arduino._format_response(response, "LED turned ON")
 
 
 @function_tool()
 async def turn_led_off(context: RunContext) -> str:
-    return _arduino._format_response(_arduino.send_command("12:OFF"), "LED turned OFF")
+    response = await _arduino.send_command("12:OFF")
+    return _arduino._format_response(response, "LED turned OFF")
 
 
 @function_tool()
 async def turn_led_on_for_duration(context: RunContext, seconds: int) -> str:
-    if "not connected" in _arduino.send_command("PING"):
+    ping_response = await _arduino.send_command("PING")
+    if "not connected" in ping_response:
         return "⚠️ Arduino not connected"
-    _arduino.send_command("12:ON")
-    time.sleep(seconds)
-    _arduino.send_command("12:OFF")
+    await _arduino.send_command("12:ON")
+    await asyncio.sleep(seconds)
+    await _arduino.send_command("12:OFF")
     return f"✓ LED was ON for {seconds} seconds"
 
 
 @function_tool()
 async def turn_fan_on(context: RunContext) -> str:
-    return _arduino._format_response(_arduino.send_command("10:ON"), "Fan turned ON")
+    response = await _arduino.send_command("10:ON")
+    return _arduino._format_response(response, "Fan turned ON")
 
 
 @function_tool()
 async def turn_fan_off(context: RunContext) -> str:
-    return _arduino._format_response(_arduino.send_command("10:OFF"), "Fan turned OFF")
+    response = await _arduino.send_command("10:OFF")
+    return _arduino._format_response(response, "Fan turned OFF")
 
 
 @function_tool()
 async def open_door(context: RunContext) -> str:
-    return _arduino._format_response(_arduino.send_command("8:OPEN"), "Door opened")
+    response = await _arduino.send_command("8:OPEN")
+    return _arduino._format_response(response, "Door opened")
 
 
 @function_tool()
 async def close_door(context: RunContext) -> str:
-    return _arduino._format_response(_arduino.send_command("8:CLOSE"), "Door closed")
+    response = await _arduino.send_command("8:CLOSE")
+    return _arduino._format_response(response, "Door closed")
 
 
-def cleanup_hardware():
-    _arduino.send_command("12:OFF")
-    _arduino.send_command("10:OFF")
+async def cleanup_hardware():
+    await _arduino.send_command("12:OFF")
+    await _arduino.send_command("10:OFF")
     _arduino.close()

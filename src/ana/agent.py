@@ -1,5 +1,7 @@
 """Main agent implementation for ANA."""
 
+import asyncio
+
 from google.genai import types
 from livekit import agents
 from livekit.agents import Agent, AgentSession, RoomInputOptions
@@ -21,6 +23,7 @@ class Assistant(Agent):
     """ANA Assistant agent."""
 
     def __init__(self, chat_ctx=None) -> None:
+        """Initialize the agent."""
         super().__init__(
             instructions=AGENT_INSTRUCTION,
             llm=google.beta.realtime.RealtimeModel(
@@ -29,29 +32,42 @@ class Assistant(Agent):
                 voice=config.model["voice"],
                 temperature=config.model["temperature"],
             ),
-            tools=get_tools(),
+            tools=[],  # Tools will be set after async initialization
             chat_ctx=chat_ctx,
         )
 
 
 async def entrypoint(ctx: agents.JobContext):
     """Main entrypoint for the agent."""
-    # Use default AgentSession with Gemini's built-in VAD
     session = AgentSession()
     user_name = config.get("user_name")
 
-    # Initialize Mem0 client with custom instructions
-    try:
-        mem0 = initialize_mem0_client()
-        results, memory_str = load_initial_memories(mem0, user_name, count=10)
-        initial_ctx = create_memory_context(
-            results, user_name, has_mem0=mem0 is not None
-        )
-    except Exception as e:
-        agents.logger.warning(f"Failed to initialize memory: {e}")
-        mem0 = None
-        results, memory_str = [], ""
-        initial_ctx = create_memory_context([], user_name, has_mem0=False)
+    # Parallel initialization for faster startup
+    async def init_memory():
+        """Initialize mem0 in parallel."""
+        try:
+            # Initialize mem0 client (already async)
+            mem0 = await initialize_mem0_client()
+            # Load initial memories (now async)
+            results, memory_str = await load_initial_memories(mem0, user_name, 5)
+            return mem0, results, memory_str
+        except Exception as e:
+            agents.logger.warning(f"Failed to initialize memory: {e}")
+            return None, [], ""
+
+    async def init_tools():
+        """Get tools (runs in parallel)."""
+        # Run in executor to avoid blocking
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, get_tools)
+
+    # Run mem0 and tool initialization in parallel
+    (mem0, results, memory_str), tools = await asyncio.gather(
+        init_memory(),
+        init_tools(),
+    )
+
+    initial_ctx = create_memory_context(results, user_name, has_mem0=mem0 is not None)
 
     # Define shutdown hook for saving conversation to Mem0
     async def save_conversation():
@@ -62,12 +78,15 @@ async def entrypoint(ctx: agents.JobContext):
     ctx.add_shutdown_callback(save_conversation)
     ctx.add_shutdown_callback(close_terminal_window)
 
+    # Create assistant with pre-loaded tools
+    assistant = Assistant(chat_ctx=initial_ctx)
+    assistant._tools = tools  # Use pre-loaded tools
+
     await session.start(
         room=ctx.room,
-        agent=Assistant(chat_ctx=initial_ctx),
+        agent=assistant,
         room_input_options=RoomInputOptions(
             video_enabled=False,
-            audio_enabled=True,
             noise_cancellation=noise_cancellation.BVC(),
         ),
     )

@@ -22,20 +22,20 @@ class Config:
         if not config_file.exists():
             raise FileNotFoundError(f"Config file not found: {config_file}")
 
-        # Load JSON config
-        try:
-            with open(config_file, "r") as f:
-                self._config: dict[str, Any] = json.load(f)
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in config file {config_file}: {e}")
+        # Load JSON config (use faster json loading)
+        with open(config_file, "r", encoding="utf-8") as f:
+            self._config: dict[str, Any] = json.load(f)
 
-        # Override sensitive credentials from environment
-        self._config["email"]["user"] = os.getenv("GMAIL_USER")
-        self._config["email"]["password"] = os.getenv("GMAIL_APP_PASSWORD")
+        # Override sensitive credentials from environment (lazy load)
+        self._email_loaded = False
 
     @property
     def email(self) -> dict[str, Any]:
-        """Email configuration."""
+        """Email configuration (lazy loads credentials)."""
+        if not self._email_loaded:
+            self._config["email"]["user"] = os.getenv("GMAIL_USER")
+            self._config["email"]["password"] = os.getenv("GMAIL_APP_PASSWORD")
+            self._email_loaded = True
         return self._config["email"]
 
     @property

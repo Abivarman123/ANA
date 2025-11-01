@@ -33,4 +33,6 @@ dependencies = [
   "send2trash>=1.8.3",
   "aiohttp>=3.9.0",
   "blingfire>=0.1.8",
+  "opentelemetry-sdk>=1.21.0",
+  "opentelemetry-exporter-otlp>=1.21.0",
 ]

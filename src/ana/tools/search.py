@@ -33,7 +33,7 @@ async def open_search(
     site: str = "",
 ) -> str:
     """Open Chrome with a URL, domain, or search query.
-    
+
     DO NOT use this tool if the user wants to PLAY or WATCH a video/music.
     Use play_video or play_music tools instead for playback intent.
 
@@ -42,7 +42,7 @@ async def open_search(
         site: Optional - specify where to search (youtube, google, etc.) if query is a search term
     """
     query_lower = query.lower().strip()
-    
+
     # Normalize common voice prefixes/suffixes
     cleaned = re.sub(
         r"^(open|go to|goto|visit|launch|start|take me to)\s+", "", query_lower
@@ -84,7 +84,7 @@ async def open_search(
             # 3) It's a search query - determine where to search
             encoded_query = quote_plus(query)
             site_lower = site.lower() if site else ""
-            
+
             # Build search URL based on site parameter (don't auto-detect)
             if "youtube" in site_lower:
                 url = f"https://www.youtube.com/results?search_query={encoded_query}"
@@ -120,10 +120,10 @@ async def play_video(
     query: str,
 ) -> str:
     """Play a YouTube video directly - opens and auto-plays the video.
-    
+
     Use this tool when user explicitly wants to PLAY, WATCH, or START a video.
     Examples: "play [video name]", "watch [video]", "start playing [video]"
-    
+
     NOTE: For music/songs, use play_music tool instead.
 
     Args:
@@ -131,17 +131,17 @@ async def play_video(
     """
     try:
         query_lower = query.lower()
-        
+
         # Detect if this is actually a music request
-        music_keywords = [
-            "song", "music", "album", "artist", "track", "playlist"
-        ]
-        
+        music_keywords = ["song", "music", "album", "artist", "track", "playlist"]
+
         # If music intent detected, redirect to YouTube Music
         if any(keyword in query_lower for keyword in music_keywords):
-            logging.info("Music intent detected in play_video, redirecting to YouTube Music")
+            logging.info(
+                "Music intent detected in play_video, redirecting to YouTube Music"
+            )
             return await play_music(context, query)
-        
+
         # If it's already a YouTube URL, use it directly
         if "youtube.com" in query or "youtu.be" in query:
             url = query if query.startswith("http") else f"https://{query}"
@@ -195,7 +195,7 @@ async def play_music(
     query: str,
 ) -> str:
     """Play music on YouTube Music - opens and auto-plays the song/album/playlist.
-    
+
     Use this tool when user wants to PLAY music/songs on YouTube Music.
     Examples: "play [song name]", "play music by [artist]", "play [playlist]"
 
@@ -220,7 +220,7 @@ async def play_music(
             # Extract first video ID from YouTube Music
             # YouTube Music uses different patterns, try multiple
             video_id_match = re.search(r'"videoId":"([^\"]{11})"', html)
-            
+
             if video_id_match:
                 video_id = video_id_match.group(1)
                 url = f"https://music.youtube.com/watch?v={video_id}"
@@ -228,7 +228,9 @@ async def play_music(
             else:
                 # Fallback to search results if can't find song
                 url = search_url
-                action = f"Could not find song, showing YouTube Music search for '{query}'"
+                action = (
+                    f"Could not find song, showing YouTube Music search for '{query}'"
+                )
 
         # Open in Chrome
         chrome_path = "C:/Program Files/Google/Chrome/Application/chrome.exe"

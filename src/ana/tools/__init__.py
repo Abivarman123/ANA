@@ -2,6 +2,7 @@
 
 from typing import Callable, List
 
+from .countdown import countdown
 from .email import send_email
 from .file_manager import (
     create_file,
@@ -21,10 +22,17 @@ from .hardware import (
     turn_led_on_for_duration,
 )
 from .memory import get_recent_memories, search_memories
+from .monitoring_tools import (
+    export_performance_report,
+    get_detailed_metrics,
+    get_performance_metrics,
+    get_system_health,
+    reset_metrics,
+    start_monitoring_dashboard,
+)
 from .search import open_search, play_video, search_web
 from .system import get_system_info, shutdown_agent
 from .time_utils import get_current_date, get_current_time
-from .countdown import countdown
 from .weather import get_weather
 
 
@@ -63,6 +71,13 @@ class ToolRegistry:
             search_memories,
             get_recent_memories,
             countdown,
+            # Monitoring tools
+            get_performance_metrics,
+            get_detailed_metrics,
+            get_system_health,
+            export_performance_report,
+            start_monitoring_dashboard,
+            reset_metrics,
         ]
 
     def register(self, tool: Callable):
@@ -122,4 +137,11 @@ __all__ = [
     "search_memories",
     "get_recent_memories",
     "countdown",
+    # Monitoring tools
+    "get_performance_metrics",
+    "get_detailed_metrics",
+    "get_system_health",
+    "export_performance_report",
+    "start_monitoring_dashboard",
+    "reset_metrics",
 ]

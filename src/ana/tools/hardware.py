@@ -12,52 +12,47 @@ from ..config import config
 
 
 class ArduinoController:
-    """Manages serial connection to Arduino with automatic cleanup."""
+    """Manages serial connection to Arduino with startup-only connection check."""
 
     def __init__(self):
         self._connection: Optional[serial.Serial] = None
         self._config = config.hardware
-        self._last_used = time.time()
-        self._idle_timeout = 300  # 5 minutes
         self._available = False  # <- track availability
-        self._last_error_log = 0  # <- prevent spam (log every N sec)
-        self._error_cooldown = 60  # seconds between identical error logs
+        self._initialized = False  # <- track if initialization was attempted
+
+        # Check connection once at initialization
+        self._initialize_connection()
+
+    def _initialize_connection(self) -> None:
+        """Attempt to establish Arduino connection once at startup."""
+        if self._initialized:
+            return
+
+        self._initialized = True
+        try:
+            self._connection = serial.Serial(
+                self._config["serial_port"],
+                self._config["baud_rate"],
+                timeout=self._config["timeout"],
+            )
+            time.sleep(2)
+            self._available = True
+            logging.info("✅ Arduino connection established at startup")
+        except Exception as e:
+            logging.warning(f"⚠️ Arduino not connected at startup: {e}")
+            self._available = False
+            self._connection = None
 
     def get_connection(self) -> Optional[serial.Serial]:
-        """Get or create serial connection to Arduino if available."""
-        # Close idle connection
-        if self._connection and self._connection.is_open:
-            if time.time() - self._last_used > self._idle_timeout:
-                logging.info("Closing idle Arduino connection")
-                self._connection.close()
-                self._connection = None
-
-        if self._connection is None or not self._connection.is_open:
-            try:
-                self._connection = serial.Serial(
-                    self._config["serial_port"],
-                    self._config["baud_rate"],
-                    timeout=self._config["timeout"],
-                )
-                time.sleep(2)
-                self._available = True
-                logging.info("✅ Arduino connection established")
-            except Exception as e:
-                # Avoid spamming error messages
-                now = time.time()
-                if now - self._last_error_log > self._error_cooldown:
-                    logging.warning(f"⚠️ Arduino not connected: {e}")
-                    self._last_error_log = now
-                self._available = False
-                return None
-
-        self._last_used = time.time()
-        return self._connection
+        """Get existing Arduino connection (no reconnection attempts)."""
+        if self._available and self._connection and self._connection.is_open:
+            return self._connection
+        return None
 
     def send_command(self, command: str) -> str:
         """Send command to Arduino and return response or skip if unavailable."""
         conn = self.get_connection()
-        if not conn or not self._available:
+        if not conn:
             return "⚠️ Arduino not connected"
         try:
             conn.write(f"{command}\n".encode())
@@ -65,7 +60,6 @@ class ArduinoController:
             return conn.readline().decode().strip() if conn.in_waiting else "OK"
         except Exception as e:
             logging.error(f"Arduino command error: {e}")
-            self._available = False
             return f"Error: {e}"
 
     def _format_response(self, response: str, success_msg: str) -> str:

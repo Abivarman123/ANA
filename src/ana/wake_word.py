@@ -46,10 +46,16 @@ class WakeWordDetector:
         self._cleanup_registered = False
 
         wake_config = config.wake_word
-        self.sensitivity = sensitivity if sensitivity is not None else wake_config.get("sensitivity", 0.5)
+        self.sensitivity = (
+            sensitivity
+            if sensitivity is not None
+            else wake_config.get("sensitivity", 0.5)
+        )
         if keyword_path is None:
             project_root = Path(__file__).parent.parent.parent
-            keyword_filename = wake_config.get("keyword_path", "../wake_word/Hey-ANA.ppn")
+            keyword_filename = wake_config.get(
+                "keyword_path", "../wake_word/Hey-ANA.ppn"
+            )
             keyword_path = project_root / "wake_word" / keyword_filename
         else:
             keyword_path = Path(keyword_path)
@@ -60,7 +66,7 @@ class WakeWordDetector:
         self.keyword_path = str(keyword_path)
         self.porcupine = None
         self.audio_stream = None
-        
+
         if not self._cleanup_registered:
             atexit.register(self.stop)
             self._cleanup_registered = True
@@ -89,7 +95,7 @@ class WakeWordDetector:
                 pcm, overflowed = self.audio_stream.read(self.porcupine.frame_length)
                 if overflowed:
                     logger.warning("Audio buffer overflow detected")
-                
+
                 pcm = pcm.flatten()
                 keyword_index = self.porcupine.process(pcm)
 
@@ -128,16 +134,16 @@ class WakeWordDetector:
                 logger.warning(f"Error deleting Porcupine: {e}")
             finally:
                 self.porcupine = None
-    
+
     def __enter__(self):
         """Context manager entry."""
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit with cleanup."""
         self.stop()
         return False
-    
+
     def __del__(self):
         """Cleanup on deletion."""
         self.stop()
@@ -153,13 +159,13 @@ class WakeWordDetector:
     def _is_ana_running(self) -> bool:
         """Check if ANA is already running."""
         try:
-            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            for proc in psutil.process_iter(["pid", "name", "cmdline"]):
                 try:
-                    cmdline = proc.info.get('cmdline')
-                    if cmdline and 'python' in proc.info['name'].lower():
+                    cmdline = proc.info.get("cmdline")
+                    if cmdline and "python" in proc.info["name"].lower():
                         # Check if main.py is in the command line
-                        cmdline_str = ' '.join(cmdline)
-                        if 'main.py' in cmdline_str and 'ANA' in cmdline_str:
+                        cmdline_str = " ".join(cmdline)
+                        if "main.py" in cmdline_str and "ANA" in cmdline_str:
                             return True
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
@@ -182,7 +188,18 @@ class WakeWordDetector:
 
             if sys.platform == "win32":
                 process = subprocess.Popen(
-                    ["cmd", "/c", "start", "cmd", "/k", "uv", "run", "python", str(main_script), "console"],
+                    [
+                        "cmd",
+                        "/c",
+                        "start",
+                        "cmd",
+                        "/k",
+                        "uv",
+                        "run",
+                        "python",
+                        str(main_script),
+                        "console",
+                    ],
                     cwd=str(project_root),
                     shell=True,
                     creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
@@ -195,7 +212,7 @@ class WakeWordDetector:
                     stderr=subprocess.DEVNULL,
                     start_new_session=True,
                 )
-            
+
             _spawned_processes.add(process)
 
             # Wait briefly to check if process started successfully

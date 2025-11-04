@@ -1,9 +1,9 @@
 'use client';
 
-import { type HTMLAttributes, useCallback, useState } from 'react';
+import { type HTMLAttributes, useCallback, useEffect, useState } from 'react';
 import { Track } from 'livekit-client';
 import { useChat, useRemoteParticipants } from '@livekit/components-react';
-import { ChatTextIcon, PhoneDisconnectIcon } from '@phosphor-icons/react/dist/ssr';
+import { ChatTextIcon, PhoneDisconnectIcon, UserCircle } from '@phosphor-icons/react/dist/ssr';
 import { useSession } from '@/components/app/session-provider';
 import { TrackToggle } from '@/components/livekit/agent-control-bar/track-toggle';
 import { Button } from '@/components/livekit/button';
@@ -20,13 +20,16 @@ export interface ControlBarControls {
   microphone?: boolean;
   screenShare?: boolean;
   chat?: boolean;
+  avatar?: boolean;
 }
 
 export interface AgentControlBarProps extends UseInputControlsProps {
   controls?: ControlBarControls;
   onDisconnect?: () => void;
   onChatOpenChange?: (open: boolean) => void;
+  onAvatarOpenChange?: (open: boolean) => void;
   onDeviceError?: (error: { source: Track.Source; error: Error }) => void;
+  onMicToggleReady?: (toggleFn: () => void) => void;
 }
 
 /**
@@ -39,11 +42,14 @@ export function AgentControlBar({
   onDisconnect,
   onDeviceError,
   onChatOpenChange,
+  onAvatarOpenChange,
+  onMicToggleReady,
   ...props
 }: AgentControlBarProps & HTMLAttributes<HTMLDivElement>) {
   const { send } = useChat();
   const participants = useRemoteParticipants();
   const [chatOpen, setChatOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
   const publishPermissions = usePublishPermissions();
   const { isSessionActive, endSession } = useSession();
 
@@ -58,6 +64,13 @@ export function AgentControlBar({
     handleCameraDeviceSelectError,
   } = useInputControls({ onDeviceError, saveUserChoices });
 
+  // Expose mic toggle function for keyboard hotkey
+  useEffect(() => {
+    if (onMicToggleReady) {
+      onMicToggleReady(() => microphoneToggle.toggle());
+    }
+  }, [onMicToggleReady, microphoneToggle]);
+
   const handleSendMessage = async (message: string) => {
     await send(message);
   };
@@ -68,6 +81,14 @@ export function AgentControlBar({
       onChatOpenChange?.(open);
     },
     [onChatOpenChange, setChatOpen]
+  );
+
+  const handleToggleAvatar = useCallback(
+    (open: boolean) => {
+      setAvatarOpen(open);
+      onAvatarOpenChange?.(open);
+    },
+    [onAvatarOpenChange, setAvatarOpen]
   );
 
   const handleDisconnect = useCallback(async () => {
@@ -81,6 +102,7 @@ export function AgentControlBar({
     screenShare: controls?.screenShare ?? publishPermissions.screenShare,
     camera: controls?.camera ?? publishPermissions.camera,
     chat: controls?.chat ?? publishPermissions.data,
+    avatar: controls?.avatar ?? true,
   };
 
   const isAgentAvailable = participants.some((p) => p.isAgent);
@@ -158,6 +180,19 @@ export function AgentControlBar({
           >
             <ChatTextIcon weight="bold" />
           </Toggle>
+
+          {/* Toggle Avatar */}
+          {visibleControls.avatar && (
+            <Toggle
+              size="icon"
+              variant="secondary"
+              aria-label="Toggle 3D avatar"
+              pressed={avatarOpen}
+              onPressedChange={handleToggleAvatar}
+            >
+              <UserCircle weight="bold" />
+            </Toggle>
+          )}
         </div>
 
         {/* Disconnect */}

@@ -1,13 +1,20 @@
 """Main agent implementation for ANA."""
 
 import logging
+
 from google.genai import types
 from livekit import agents
-from livekit.agents import Agent, AgentSession, RoomInputOptions, ChatContext, ChatMessage
+from livekit.agents import (
+    Agent,
+    AgentSession,
+    ChatContext,
+    ChatMessage,
+    RoomInputOptions,
+)
 from livekit.plugins import google, noise_cancellation
 
 from .config import config
-from .monitoring import initialize_monitoring, PerformanceMonitor, get_metrics_collector
+from .monitoring import PerformanceMonitor, get_metrics_collector, initialize_monitoring
 from .prompts import AGENT_INSTRUCTION, SESSION_INSTRUCTION
 from .tools import get_tools
 from .tools.memory import (
@@ -36,7 +43,9 @@ class Assistant(Agent):
         )
         self.metrics_collector = get_metrics_collector()
 
-    async def on_user_turn_completed(self, turn_ctx: ChatContext, new_message: ChatMessage) -> None:
+    async def on_user_turn_completed(
+        self, turn_ctx: ChatContext, new_message: ChatMessage
+    ) -> None:
         """Called when user turn is completed - track metrics."""
         try:
             # End current turn tracking and get the completed metrics
@@ -47,34 +56,34 @@ class Assistant(Agent):
 
             # Start tracking next turn - generate a unique speech ID
             import uuid
+
             speech_id = str(uuid.uuid4())[:8]
             self.metrics_collector.start_turn(speech_id)
 
         except Exception as e:
             logging.error(f"Error in turn completion tracking: {e}")
-    
+
     async def on_agent_turn_started(self, turn_ctx: ChatContext) -> None:
         """Called when agent turn starts - ensure metrics tracking is active."""
         try:
             # If no turn is being tracked, start one
             if not self.metrics_collector.current_turn:
                 import uuid
+
                 speech_id = str(uuid.uuid4())[:8]
                 self.metrics_collector.start_turn(speech_id)
         except Exception as e:
             logging.error(f"Error starting turn tracking: {e}")
-    
+
     async def on_agent_turn_completed(self, turn_ctx: ChatContext) -> None:
         """Called when agent turn completes - end metrics tracking."""
         try:
-            # End the current turn to capture metrics
-            completed_turn = self.metrics_collector.end_turn()
-            if completed_turn:
-                # Log to console for debugging
-                print(f"✓ Turn {self.metrics_collector.total_turns} completed - Latency: {completed_turn.total_latency:.2f}s, Tokens/s: {completed_turn.llm_tokens_per_second:.1f}")
-            
+            # End the current turn to capture metrics (logged to dashboard/file only)
+            self.metrics_collector.end_turn()
+
             # Start tracking next turn
             import uuid
+
             speech_id = str(uuid.uuid4())[:8]
             self.metrics_collector.start_turn(speech_id)
         except Exception as e:
@@ -83,14 +92,18 @@ class Assistant(Agent):
 
 async def entrypoint(ctx: agents.JobContext):
     """Main entrypoint for the agent."""
+    # Wait for actual connection before initializing (prevents double init in dev mode)
+    await ctx.connect()
+
     # Initialize monitoring system first
     telemetry_provider = config.get("telemetry", {}).get("provider", "console")
     metrics_collector = initialize_monitoring(ctx, telemetry_provider)
-    
+
     # Start dashboard if enabled
     if config.get("telemetry", {}).get("enable_dashboard", False):
         try:
             from .monitoring_dashboard_improved import start_improved_dashboard
+
             dashboard_port = config.get("telemetry", {}).get("dashboard_port", 8080)
             dashboard_url = start_improved_dashboard(dashboard_port, auto_open=True)
             if dashboard_url:
@@ -128,30 +141,27 @@ async def entrypoint(ctx: agents.JobContext):
 
     # Create assistant instance
     assistant = Assistant(chat_ctx=initial_ctx)
-    
+
     # Start initial turn tracking
     import uuid
+
     initial_speech_id = str(uuid.uuid4())[:8]
     metrics_collector.start_turn(initial_speech_id)
-    
+
     # Start session with monitoring
     with PerformanceMonitor("session_start"):
         await session.start(
             room=ctx.room,
             agent=assistant,
             room_input_options=RoomInputOptions(
-                video_enabled=False,
-                audio_enabled=True,
                 noise_cancellation=noise_cancellation.BVC(),
             ),
         )
 
-    await ctx.connect()
-
     # Start periodic metrics update task for Gemini Realtime API
     # Since Gemini's native audio doesn't fire standard callbacks reliably
     import asyncio
-    
+
     async def periodic_metrics_update():
         """Periodically update metrics based on session activity."""
         last_message_count = 0
@@ -159,33 +169,34 @@ async def entrypoint(ctx: agents.JobContext):
         while True:
             try:
                 await asyncio.sleep(5)  # Check every 5 seconds
-                
+
                 # Check if there are new messages in the session
                 message_count_changed = False
-                if hasattr(session, 'history') and hasattr(session.history, 'items'):
+                if hasattr(session, "history") and hasattr(session.history, "items"):
                     current_count = len(session.history.items)
                     if current_count > last_message_count:
                         message_count_changed = True
                         last_message_count = current_count
-                
+
                 # If messages changed OR just to generate activity, complete a turn
-                if message_count_changed or turn_counter % 3 == 0:  # Force update every 15 seconds
-                    # End previous turn if active
+                if (
+                    message_count_changed or turn_counter % 3 == 0
+                ):  # Force update every 15 seconds
+                    # End previous turn if active (metrics logged to dashboard/file only)
                     if metrics_collector.current_turn:
-                        completed_turn = metrics_collector.end_turn()
-                        if completed_turn:
-                            print(f"✓ Turn {metrics_collector.total_turns} completed - Latency: {completed_turn.total_latency:.2f}s, Tokens/s: {completed_turn.llm_tokens_per_second:.1f}")
-                    
+                        metrics_collector.end_turn()
+
                     # Start new turn
                     import uuid
+
                     speech_id = str(uuid.uuid4())[:8]
                     metrics_collector.start_turn(speech_id)
-                
+
                 turn_counter += 1
-                        
+
             except Exception as e:
                 logging.error(f"Error in periodic metrics update: {e}")
-    
+
     # Start the periodic update task
     asyncio.create_task(periodic_metrics_update())
 

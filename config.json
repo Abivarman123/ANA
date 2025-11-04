@@ -11,7 +11,7 @@
   },
   "model": {
     "model_name": "gemini-2.5-flash-native-audio-preview-09-2025",
-    "voice": "Aoede",
+    "voice": "Zephyr",
     "temperature": 0.8
   },
   "file_manager": {
@@ -28,7 +28,7 @@
   "user_name": "abivarman",
   "telemetry": {
     "provider": "console",
-    "enable_dashboard": true,
+    "enable_dashboard": false,
     "dashboard_port": 8080,
     "auto_export_metrics": true,
     "metrics_history_size": 1000,

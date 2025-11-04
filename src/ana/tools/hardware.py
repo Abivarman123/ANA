@@ -20,9 +20,6 @@ class ArduinoController:
         self._available = False  # <- track availability
         self._initialized = False  # <- track if initialization was attempted
 
-        # Check connection once at initialization
-        self._initialize_connection()
-
     def _initialize_connection(self) -> None:
         """Attempt to establish Arduino connection once at startup."""
         if self._initialized:
@@ -51,6 +48,8 @@ class ArduinoController:
 
     def send_command(self, command: str) -> str:
         """Send command to Arduino and return response or skip if unavailable."""
+        if not self._initialized:
+            self._initialize_connection()
         conn = self.get_connection()
         if not conn:
             return "⚠️ Arduino not connected"
@@ -88,6 +87,12 @@ class ArduinoController:
 # Global Arduino controller instance
 _arduino = ArduinoController()
 atexit.register(_arduino.close)
+
+
+# --- Lifecycle helpers --- #
+def initialize_hardware() -> None:
+    """Ensure Arduino connection is initialized for the active worker process."""
+    _arduino._initialize_connection()
 
 
 # --- Tools --- #

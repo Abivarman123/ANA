@@ -64,12 +64,16 @@ export function AgentControlBar({
     handleCameraDeviceSelectError,
   } = useInputControls({ onDeviceError, saveUserChoices });
 
+  const handleMicToggle = useCallback(() => {
+    microphoneToggle.toggle();
+  }, [microphoneToggle]);
+
   // Expose mic toggle function for keyboard hotkey
   useEffect(() => {
     if (onMicToggleReady) {
-      onMicToggleReady(() => microphoneToggle.toggle());
+      onMicToggleReady(handleMicToggle);
     }
-  }, [onMicToggleReady, microphoneToggle]);
+  }, [onMicToggleReady, handleMicToggle]);
 
   const handleSendMessage = async (message: string) => {
     await send(message);

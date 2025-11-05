@@ -26,16 +26,9 @@
   },
   "mcp_servers": [],
   "user_name": "abivarman",
-  "telemetry": {
-    "provider": "console",
-    "enable_dashboard": false,
-    "dashboard_port": 8080,
-    "auto_export_metrics": true,
-    "metrics_history_size": 1000,
-    "log_performance_warnings": true,
-    "latency_thresholds": {
-      "warning": 2.0,
-      "critical": 5.0
+  "session": {
+    "compression": {
+        "trigger_tokens": 16000
     }
-  }
+}
 }

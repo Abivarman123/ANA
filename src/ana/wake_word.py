@@ -5,7 +5,6 @@ import logging
 import os
 import subprocess
 import sys
-import time
 from pathlib import Path
 from typing import Callable, Optional, Set
 
@@ -29,21 +28,12 @@ class WakeWordDetector:
         sensitivity: Optional[float] = None,
         on_wake_callback: Optional[Callable] = None,
     ):
-        """
-        Initialize wake word detector.
-
-        Args:
-            access_key: Picovoice access key for Porcupine
-            keyword_path: Path to .ppn wake word file (defaults to config.json setting)
-            sensitivity: Detection sensitivity 0.0-1.0 (defaults to config.json setting)
-            on_wake_callback: Callback function when wake word is detected
-        """
+        """Initialize wake word detector."""
         from .config import config
 
         self.access_key = access_key
         self.on_wake_callback = on_wake_callback
         self.is_running = False
-        self._cleanup_registered = False
 
         wake_config = config.wake_word
         self.sensitivity = (
@@ -51,6 +41,7 @@ class WakeWordDetector:
             if sensitivity is not None
             else wake_config.get("sensitivity", 0.5)
         )
+
         if keyword_path is None:
             project_root = Path(__file__).parent.parent.parent
             keyword_filename = wake_config.get(
@@ -67,9 +58,7 @@ class WakeWordDetector:
         self.porcupine = None
         self.audio_stream = None
 
-        if not self._cleanup_registered:
-            atexit.register(self.stop)
-            self._cleanup_registered = True
+        atexit.register(self.stop)
 
     def start(self):
         """Start listening for wake word."""
@@ -96,8 +85,7 @@ class WakeWordDetector:
                 if overflowed:
                     logger.warning("Audio buffer overflow detected")
 
-                pcm = pcm.flatten()
-                keyword_index = self.porcupine.process(pcm)
+                keyword_index = self.porcupine.process(pcm.flatten())
 
                 if keyword_index >= 0:
                     print("✨ Wake word detected! Activating ANA...")
@@ -135,102 +123,79 @@ class WakeWordDetector:
             finally:
                 self.porcupine = None
 
-    def __enter__(self):
-        """Context manager entry."""
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit with cleanup."""
-        self.stop()
-        return False
-
-    def __del__(self):
-        """Cleanup on deletion."""
-        self.stop()
-
     def _handle_wake_word(self):
         """Handle wake word detection."""
         if self.on_wake_callback:
             self.on_wake_callback()
         else:
-            # Default behavior: launch ANA
             self._launch_ana()
 
-    def _is_ana_running(self) -> bool:
-        """Check if ANA is already running."""
+    def _is_process_running(self, search_args: list[str]) -> bool:
+        """Check if a process with given command line args is running."""
         try:
-            for proc in psutil.process_iter(["pid", "name", "cmdline"]):
-                try:
-                    cmdline = proc.info.get("cmdline")
-                    if cmdline and "python" in proc.info["name"].lower():
-                        # Check if main.py is in the command line
-                        cmdline_str = " ".join(cmdline)
-                        if "main.py" in cmdline_str and "ANA" in cmdline_str:
-                            return True
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    continue
-            return False
+            for proc in psutil.process_iter(["cmdline"]):
+                cmdline = proc.info.get("cmdline")
+                if cmdline and all(
+                    any(arg in cmd for cmd in cmdline) for arg in search_args
+                ):
+                    return True
         except Exception:
-            return False
+            pass
+        return False
 
     def _launch_ana(self):
-        """Launch the main ANA agent."""
-        # Check if ANA is already running
-        if self._is_ana_running():
-            print("⚠️  ANA is already running. Skipping launch.")
-            return
+        """Launch the main ANA backend and UI."""
+        project_root = Path(__file__).parent.parent.parent
+        ui_path = Path.home() / "Desktop" / "ANA" / "ui"
 
-        try:
-            project_root = Path(__file__).parent.parent.parent
-            main_script = project_root / "main.py"
-
-            print("🚀 Launching ANA...")
-
-            if sys.platform == "win32":
-                process = subprocess.Popen(
+        # Launch backend
+        if not self._is_process_running(["main.py"]):
+            print("🚀 Launching ANA backend...")
+            try:
+                backend_process = subprocess.Popen(
                     [
-                        "cmd",
-                        "/c",
-                        "start",
-                        "cmd",
-                        "/k",
-                        "uv",
-                        "run",
-                        "python",
-                        str(main_script),
-                        "console",
+                        "powershell",
+                        "-NoExit",
+                        "-Command",
+                        f"cd '{project_root}' ; uv run main.py dev",
                     ],
-                    cwd=str(project_root),
                     shell=True,
                     creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
                 )
-            else:
-                process = subprocess.Popen(
-                    [sys.executable, str(main_script), "console"],
-                    cwd=str(project_root),
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    start_new_session=True,
+                _spawned_processes.add(backend_process)
+                print("✅ ANA backend launched!")
+            except Exception as e:
+                print(f"❌ Failed to launch ANA backend: {e}")
+        else:
+            print("⚠️  ANA backend already running. Skipping launch.")
+
+        # Launch UI
+        if not self._is_process_running(["pnpm", "dev"]):
+            print("🌐 Launching ANA UI...")
+            try:
+                ui_process = subprocess.Popen(
+                    [
+                        "powershell",
+                        "-NoExit",
+                        "-Command",
+                        f"cd '{ui_path}' ; pnpm run dev",
+                    ],
+                    shell=True,
+                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
                 )
-
-            _spawned_processes.add(process)
-
-            # Wait briefly to check if process started successfully
-            time.sleep(1)
-            if process.poll() is None:
-                print("✅ ANA launched successfully!")
-            else:
-                print("⚠️  ANA process exited immediately. Check for errors.")
-
-        except Exception as e:
-            print(f"❌ Failed to launch ANA: {e}")
+                _spawned_processes.add(ui_process)
+                print("✅ ANA UI launched!")
+            except Exception as e:
+                print(f"❌ Failed to launch ANA UI: {e}")
+        else:
+            print("⚠️  ANA UI already running. Skipping launch.")
 
 
 def cleanup_spawned_processes():
     """Cleanup any spawned ANA processes that are still running."""
     for process in list(_spawned_processes):
         try:
-            if process.poll() is None:  # Process still running
+            if process.poll() is None:
                 logger.info(f"Cleaning up spawned process {process.pid}")
                 process.terminate()
                 try:
@@ -242,7 +207,6 @@ def cleanup_spawned_processes():
             logger.warning(f"Error cleaning up process: {e}")
 
 
-# Register cleanup on exit
 atexit.register(cleanup_spawned_processes)
 
 
@@ -250,16 +214,14 @@ def main():
     """Main entry point for wake word detector."""
     from dotenv import load_dotenv
 
-    # Load environment variables
     load_dotenv()
-
     access_key = os.getenv("PICOVOICE_KEY")
+
     if not access_key:
         print("❌ Error: PICOVOICE_KEY not found in .env file")
         print("Please get your free access key from https://console.picovoice.ai/")
         sys.exit(1)
 
-    # Create and start detector with context manager
     with WakeWordDetector(access_key=access_key) as detector:
         try:
             detector.start()

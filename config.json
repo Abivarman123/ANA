@@ -6,13 +6,12 @@
   "hardware": {
     "serial_port": "COM8",
     "baud_rate": 9600,
-    "timeout": 1,
-    "pir_monitoring_enabled": true
+    "timeout": 1
   },
   "model": {
     "model_name": "gemini-2.5-flash-native-audio-preview-09-2025",
     "voice": "Zephyr",
-    "temperature": 0.8
+    "temperature": 0.7
   },
   "file_manager": {
     "sandbox_path": "~/Desktop",
@@ -28,7 +27,7 @@
   "user_name": "abivarman",
   "session": {
     "compression": {
-        "trigger_tokens": 16000
+        "trigger_tokens": 8000
     }
 }
 }

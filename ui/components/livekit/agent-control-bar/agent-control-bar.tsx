@@ -4,6 +4,7 @@ import { type HTMLAttributes, useCallback, useEffect, useState } from 'react';
 import { Track } from 'livekit-client';
 import { useChat, useRemoteParticipants } from '@livekit/components-react';
 import { ChatTextIcon, PhoneDisconnectIcon, UserCircle } from '@phosphor-icons/react/dist/ssr';
+import { SessionInfo } from '@/components/app/session-info';
 import { useSession } from '@/components/app/session-provider';
 import { TrackToggle } from '@/components/livekit/agent-control-bar/track-toggle';
 import { Button } from '@/components/livekit/button';
@@ -120,6 +121,9 @@ export function AgentControlBar({
       )}
       {...props}
     >
+      {/* Session Info */}
+      <SessionInfo className="mb-2 px-1" />
+
       {/* Chat Input */}
       {visibleControls.chat && (
         <ChatInput

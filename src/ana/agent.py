@@ -21,18 +21,25 @@ class Assistant(Agent):
     """ANA Assistant agent with extended session support."""
 
     def __init__(self, chat_ctx=None) -> None:
+        realtime_input_cfg = types.RealtimeInputConfig(
+            automatic_activity_detection=types.AutomaticActivityDetection(
+                prefix_padding_ms=5,
+                silence_duration_ms=120,
+            ),
+        )
         super().__init__(
             instructions=AGENT_INSTRUCTION,
             llm=google.beta.realtime.RealtimeModel(
                 model=config.model["model_name"],
-                _gemini_tools=[types.GoogleSearch()],
+                # _gemini_tools=[types.GoogleSearch()],
                 voice=config.model["voice"],
                 temperature=config.model["temperature"],
                 context_window_compression=types.ContextWindowCompressionConfig(
                     sliding_window=types.SlidingWindow(),
-                    trigger_tokens=16000,
+                    trigger_tokens=8000,
                 ),
                 session_resumption=types.SessionResumptionConfig(handle=None),
+                realtime_input_config=realtime_input_cfg,
             ),
             tools=get_tools(),
             chat_ctx=chat_ctx,

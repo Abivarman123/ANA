@@ -222,7 +222,7 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
       neutral: 0,
       sad: 0,
       angry: 0,
-      blink: 0
+      blink: 0,
     };
     const targetExpressionValues = {
       happy: 0,
@@ -231,7 +231,7 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
       neutral: 0,
       sad: 0,
       angry: 0,
-      blink: 0
+      blink: 0,
     };
 
     // Load VRM

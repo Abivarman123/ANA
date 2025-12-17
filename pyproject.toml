@@ -6,7 +6,7 @@ name = "ANA"
 version = "0.0.1"
 description = "ANA - Advanced Neural Assistant. Inspired by JARVIS from Iron Man."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 authors = [{ name = "Abivarman", email = "jabivarman@gmail.com" }]
 license = { text = "MIT" }
 dependencies = [

@@ -6,7 +6,7 @@ from livekit.agents import Agent, AgentSession, RoomInputOptions
 from livekit.plugins import google, noise_cancellation
 
 from .config import config
-from .prompts import AGENT_INSTRUCTION, SESSION_INSTRUCTION
+from .prompts import NUEROSAMA_MODE, SESSION_INSTRUCTION
 from .tools import get_tools
 from .tools.memory import (
     create_memory_context,
@@ -22,13 +22,13 @@ class Assistant(Agent):
 
     def __init__(self, chat_ctx=None) -> None:
         realtime_input_cfg = types.RealtimeInputConfig(
-            automatic_activity_detection=types.AutomaticActivityDetection(
-                prefix_padding_ms=5,
-                silence_duration_ms=120,
-            ),
+            # automatic_activity_detection=types.AutomaticActivityDetection(
+            #     prefix_padding_ms=5,
+            #     silence_duration_ms=120,
+            # ),
         )
         super().__init__(
-            instructions=AGENT_INSTRUCTION,
+            instructions=NUEROSAMA_MODE,
             llm=google.beta.realtime.RealtimeModel(
                 model=config.model["model_name"],
                 # _gemini_tools=[types.GoogleSearch()],

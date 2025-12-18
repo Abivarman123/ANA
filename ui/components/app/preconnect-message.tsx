@@ -29,7 +29,7 @@ const VIEW_MOTION_PROPS = {
   initial: 'hidden',
   animate: 'visible',
   exit: 'hidden',
-};
+} as const;
 
 interface PreConnectMessageProps {
   messages?: ReceivedChatMessage[];

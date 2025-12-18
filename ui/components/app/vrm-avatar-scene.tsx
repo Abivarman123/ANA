@@ -182,17 +182,17 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
     const headRotation = { x: 0, y: 0, z: 0 };
     const targetHeadRotation = { x: 0, y: 0, z: 0 };
     const previousHeadRotation = { x: 0, y: 0, z: 0 };
-    
+
     const leftArmRotation = { x: 0, y: 0, z: -1.2 };
     const rightArmRotation = { x: 0, y: 0, z: 1.2 };
     const targetLeftArmRotation = { x: 0, y: 0, z: -1.2 };
     const targetRightArmRotation = { x: 0, y: 0, z: 1.2 };
-    
+
     const leftLowerArmRotation = { x: -0.2 };
     const rightLowerArmRotation = { x: -0.2 };
     const targetLeftLowerArmRotation = { x: -0.2 };
     const targetRightLowerArmRotation = { x: -0.2 };
-    
+
     const handRotation = { left: { x: 0, y: 0, z: 0 }, right: { x: 0, y: 0, z: 0 } };
     const targetHandRotation = { left: { x: 0, y: 0, z: 0 }, right: { x: 0, y: 0, z: 0 } };
 
@@ -299,7 +299,8 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
 
         if (analyser && dataArray && dataArray.length > 0) {
           try {
-            analyser.getByteFrequencyData(dataArray);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            analyser.getByteFrequencyData(dataArray as any);
 
             // Calculate volume (average of all frequencies)
             const sum = dataArray.reduce((acc, val) => acc + val, 0);
@@ -450,7 +451,7 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
                 previousHeadRotation.x = targetHeadRotation.x;
                 previousHeadRotation.y = targetHeadRotation.y;
                 previousHeadRotation.z = targetHeadRotation.z;
-                
+
                 currentGesture = Math.floor(Math.random() * 7);
                 nextGestureTime = elapsedTime + 2 + Math.random() * 2;
                 gesturePhase = 0;
@@ -458,7 +459,7 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
               }
 
               gesturePhase += deltaTime;
-              
+
               // Smooth gesture transition
               if (gestureTransitionProgress < 1) {
                 gestureTransitionProgress = Math.min(1, gestureTransitionProgress + deltaTime * 1.5);
@@ -523,7 +524,7 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
               targetHeadRotation.x = previousHeadRotation.x + (newTargetHeadRotation.x - previousHeadRotation.x) * easedGestureTransition;
               targetHeadRotation.y = previousHeadRotation.y + (newTargetHeadRotation.y - previousHeadRotation.y) * easedGestureTransition;
               targetHeadRotation.z = previousHeadRotation.z + (newTargetHeadRotation.z - previousHeadRotation.z) * easedGestureTransition;
-              
+
               targetNeckRotation.x = newTargetNeckRotation.x;
               targetNeckRotation.y = newTargetNeckRotation.y;
               targetNeckRotation.z = newTargetNeckRotation.z;
@@ -680,7 +681,7 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
           // Smooth shoulder movement
           const leftShoulder = vrm.humanoid.getNormalizedBoneNode('leftShoulder');
           const rightShoulder = vrm.humanoid.getNormalizedBoneNode('rightShoulder');
-          
+
           if (isSpeaking && speechIntensity > 0.35) {
             if (leftShoulder) {
               const targetShoulderZ = Math.sin(elapsedTime * 1.3) * 0.03;
@@ -728,7 +729,8 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
 
           if (isSpeaking && speechIntensity > 0.3) {
             fingerBones.forEach((boneName, index) => {
-              const bone = vrm.humanoid.getNormalizedBoneNode(boneName as any);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const bone = vrm!.humanoid.getNormalizedBoneNode(boneName as any);
               if (bone) {
                 const fingerCurl = Math.sin(elapsedTime * 1.5 + index * 0.2) * speechIntensity * 0.15;
                 bone.rotation.z = smoothLerp(bone.rotation.z, fingerCurl, 0.1, deltaTime);
@@ -736,7 +738,8 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
             });
           } else {
             fingerBones.forEach((boneName) => {
-              const bone = vrm.humanoid.getNormalizedBoneNode(boneName as any);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const bone = vrm!.humanoid.getNormalizedBoneNode(boneName as any);
               if (bone) {
                 bone.rotation.z = smoothLerp(bone.rotation.z, 0, 0.1, deltaTime);
               }

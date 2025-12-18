@@ -22,10 +22,10 @@ class Assistant(Agent):
 
     def __init__(self, chat_ctx=None) -> None:
         realtime_input_cfg = types.RealtimeInputConfig(
-            # automatic_activity_detection=types.AutomaticActivityDetection(
-            #     prefix_padding_ms=5,
-            #     silence_duration_ms=120,
-            # ),
+            automatic_activity_detection=types.AutomaticActivityDetection(
+                prefix_padding_ms=5,
+                silence_duration_ms=120,
+            ),
         )
         super().__init__(
             instructions=NUEROSAMA_MODE,
@@ -55,8 +55,8 @@ async def entrypoint(ctx: agents.JobContext):
 
     # Initialize Mem0 client
     try:
-        mem0 = initialize_mem0_client()
-        results, memory_str = load_initial_memories(mem0, user_name, count=10)
+        mem0 = await initialize_mem0_client()
+        results, memory_str = await load_initial_memories(mem0, user_name, count=10)
         initial_ctx = create_memory_context(results, user_name, has_mem0=True)
     except Exception:
         mem0 = None
@@ -64,9 +64,10 @@ async def entrypoint(ctx: agents.JobContext):
         initial_ctx = create_memory_context([], user_name, has_mem0=False)
 
     # Register shutdown callbacks
-    ctx.add_shutdown_callback(
-        lambda: save_conversation_to_mem0(session, mem0, user_name, memory_str)
-    )
+    async def save_memory_callback():
+        await save_conversation_to_mem0(session, mem0, user_name, memory_str)
+
+    ctx.add_shutdown_callback(save_memory_callback)
     ctx.add_shutdown_callback(close_terminal_window)
 
     # Create and start assistant

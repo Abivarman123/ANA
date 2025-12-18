@@ -5,7 +5,7 @@ import logging
 import os
 
 from livekit.agents import AgentSession, ChatContext, function_tool
-from mem0 import MemoryClient
+from mem0 import AsyncMemoryClient
 
 MEMORY_FILTER_PROMPT = """Extract ONLY long-term, meaningful information. Be highly selective.
 
@@ -36,16 +36,16 @@ RULES:
 def get_mem0_client():
     """Get or create mem0 client instance."""
     mem0_api_key = os.getenv("MEM0_API_KEY")
-    return MemoryClient(api_key=mem0_api_key) if mem0_api_key else None
+    return AsyncMemoryClient(api_key=mem0_api_key) if mem0_api_key else None
 
 
-def verify_custom_instructions(mem0) -> bool:
+async def verify_custom_instructions(mem0) -> bool:
     """Verify that custom instructions are properly set."""
     if not mem0:
         return False
 
     try:
-        project_info = mem0.project.get(fields=["custom_instructions"])
+        project_info = await mem0.project.get(fields=["custom_instructions"])
         current_instructions = (
             project_info.get("custom_instructions", "") if project_info else ""
         )
@@ -91,7 +91,7 @@ async def search_memories(query: str, limit: int = 5) -> str:
         return "Memory system is not available. MEM0_API_KEY not configured."
 
     try:
-        results = mem0.search(
+        results = await mem0.search(
             query=query, filters={"user_id": "abivarman"}, limit=min(limit, 20)
         )
 
@@ -116,7 +116,7 @@ async def get_recent_memories(count: int = 10) -> str:
         return "Memory system is not available. MEM0_API_KEY not configured."
 
     try:
-        results = mem0.get_all(
+        results = await mem0.get_all(
             filters={"user_id": "abivarman"}, page=1, page_size=min(count, 20)
         )
         memory_list = (
@@ -136,7 +136,7 @@ async def get_recent_memories(count: int = 10) -> str:
         return f"Failed to retrieve recent memories: {str(e)}"
 
 
-def initialize_mem0_client():
+async def initialize_mem0_client():
     """Initialize Mem0 client with custom instructions."""
     mem0_api_key = os.getenv("MEM0_API_KEY")
     if not mem0_api_key:
@@ -144,13 +144,13 @@ def initialize_mem0_client():
         return None
 
     logging.info("Initializing Mem0 client...")
-    mem0 = MemoryClient(api_key=mem0_api_key)
+    mem0 = AsyncMemoryClient(api_key=mem0_api_key)
 
     try:
-        mem0.project.update(custom_instructions=MEMORY_FILTER_PROMPT)
+        await mem0.project.update(custom_instructions=MEMORY_FILTER_PROMPT)
         logging.info("✓ Custom instructions updated")
 
-        if not verify_custom_instructions(mem0):
+        if not await verify_custom_instructions(mem0):
             logging.warning("⚠ Custom instructions verification failed")
     except Exception as e:
         logging.error(f"Failed to set custom instructions: {e}")
@@ -161,14 +161,14 @@ def initialize_mem0_client():
     return mem0
 
 
-def load_initial_memories(mem0, user_name: str = "abivarman", count: int = 10):
+async def load_initial_memories(mem0, user_name: str = "abivarman", count: int = 10):
     """Load initial memories at startup."""
     if not mem0:
         return [], ""
 
     try:
         logging.info(f"Retrieving recent memories for: {user_name}")
-        response = mem0.get_all(filters={"user_id": user_name}, page=1, page_size=count)
+        response = await mem0.get_all(filters={"user_id": user_name}, page=1, page_size=count)
 
         results = (
             response.get("results", [])
@@ -243,7 +243,7 @@ async def save_conversation_to_mem0(
     if messages_formatted:
         logging.info(f"Saving {len(messages_formatted)} messages to memory")
         try:
-            mem0.add(messages_formatted, user_id=user_name)
+            await mem0.add(messages_formatted, user_id=user_name)
             logging.info(f"✓ Chat context saved ({len(messages_formatted)} messages)")
         except Exception as e:
             logging.error(f"Failed to save conversation: {e}")

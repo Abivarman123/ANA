@@ -39,7 +39,7 @@ const BOTTOM_VIEW_MOTION_PROPS = {
     delay: 0.5,
     ease: 'easeOut',
   },
-};
+} as const;
 
 interface FadeProps {
   top?: boolean;

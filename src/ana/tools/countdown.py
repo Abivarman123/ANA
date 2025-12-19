@@ -22,7 +22,7 @@ async def countdown(
     try:
         target_date = datetime.strptime(date, "%Y-%m-%d")
         today = datetime.now()
-        
+
         if target_date < today:
             return f"The date {date} is in the past."
 

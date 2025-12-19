@@ -6,13 +6,12 @@
   "hardware": {
     "serial_port": "COM8",
     "baud_rate": 9600,
-    "timeout": 1,
-    "pir_monitoring_enabled": true
+    "timeout": 1
   },
   "model": {
-    "model_name": "gemini-2.5-flash-native-audio-preview-09-2025",
-    "voice": "Aoede",
-    "temperature": 0.8
+    "model_name": "gemini-2.5-flash-native-audio-preview-12-2025",
+    "voice": "Zephyr",
+    "temperature": 0.7
   },
   "file_manager": {
     "sandbox_path": "~/Desktop",
@@ -20,10 +19,15 @@
   },
   "wake_word": {
     "keyword_path": "Hey-ANA.ppn",
-    "sensitivity": 0.5,
+    "sensitivity": 0.6,
     "max_retries": 5,
     "retry_delay_seconds": 5
   },
   "mcp_servers": [],
-  "user_name": "abivarman"
+  "user_name": "abivarman",
+  "session": {
+    "compression": {
+      "trigger_tokens": 8000
+    }
+  }
 }

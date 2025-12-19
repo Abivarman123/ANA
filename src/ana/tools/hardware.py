@@ -13,57 +13,46 @@ from ..config import config
 
 
 class ArduinoController:
-    """Manages serial connection to Arduino with automatic cleanup."""
+    """Manages serial connection to Arduino with startup-only connection check."""
 
     def __init__(self):
         self._connection: Optional[serial.Serial] = None
         self._config = config.hardware
-        self._last_used = time.time()
-        self._idle_timeout = 300  # 5 minutes
-        self._available = False
-        self._error_logged = False  # Only log connection error once per session
+        self._available = False  # <- track availability
+        self._initialized = False  # <- track if initialization was attempted
 
-    async def get_connection(self) -> Optional[serial.Serial]:
-        """Get or create serial connection to Arduino if available."""
-        # Close idle connection
-        if self._connection and self._connection.is_open:
-            if time.time() - self._last_used > self._idle_timeout:
-                logging.info("Closing idle Arduino connection")
-                self._connection.close()
-                self._connection = None
+    def _initialize_connection(self) -> None:
+        """Attempt to establish Arduino connection once at startup."""
+        if self._initialized:
+            return
 
-        if self._connection is None or not self._connection.is_open:
-            try:
-                # Run blocking serial connection in executor to avoid blocking event loop
-                loop = asyncio.get_event_loop()
-                self._connection = await loop.run_in_executor(
-                    None,
-                    lambda: serial.Serial(
-                        self._config["serial_port"],
-                        self._config["baud_rate"],
-                        timeout=self._config["timeout"],
-                    ),
-                )
-                # Use async sleep instead of blocking
-                await asyncio.sleep(2)
-                self._available = True
-                self._error_logged = False  # Reset on successful connection
-                logging.info("✅ Arduino connection established")
-            except Exception as e:
-                # Only log once per session to avoid spam
-                if not self._error_logged:
-                    logging.warning(f"⚠️ Arduino not connected: {e}")
-                    self._error_logged = True
-                self._available = False
-                return None
+        self._initialized = True
+        try:
+            self._connection = serial.Serial(
+                self._config["serial_port"],
+                self._config["baud_rate"],
+                timeout=self._config["timeout"],
+            )
+            time.sleep(2)
+            self._available = True
+            logging.info("✅ Arduino connection established at startup")
+        except Exception as e:
+            logging.warning(f"⚠️ Arduino not connected at startup: {e}")
+            self._available = False
+            self._connection = None
 
-        self._last_used = time.time()
-        return self._connection
+    def get_connection(self) -> Optional[serial.Serial]:
+        """Get existing Arduino connection (no reconnection attempts)."""
+        if self._available and self._connection and self._connection.is_open:
+            return self._connection
+        return None
 
-    async def send_command(self, command: str) -> str:
+    def send_command(self, command: str) -> str:
         """Send command to Arduino and return response or skip if unavailable."""
-        conn = await self.get_connection()
-        if not conn or not self._available:
+        if not self._initialized:
+            self._initialize_connection()
+        conn = self.get_connection()
+        if not conn:
             return "⚠️ Arduino not connected"
         try:
             # Run blocking I/O in executor
@@ -76,7 +65,6 @@ class ArduinoController:
             return response
         except Exception as e:
             logging.error(f"Arduino command error: {e}")
-            self._available = False
             return f"Error: {e}"
 
     def _format_response(self, response: str, success_msg: str) -> str:
@@ -105,6 +93,12 @@ class ArduinoController:
 # Global Arduino controller instance
 _arduino = ArduinoController()
 atexit.register(_arduino.close)
+
+
+# --- Lifecycle helpers --- #
+def initialize_hardware() -> None:
+    """Ensure Arduino connection is initialized for the active worker process."""
+    _arduino._initialize_connection()
 
 
 # --- Tools --- #

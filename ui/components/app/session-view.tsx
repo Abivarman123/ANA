@@ -6,6 +6,7 @@ import type { AppConfig } from '@/app-config';
 import { ChatTranscript } from '@/components/app/chat-transcript';
 import { PreConnectMessage } from '@/components/app/preconnect-message';
 import { TileLayout } from '@/components/app/tile-layout';
+import { VRMAvatar } from '@/components/app/vrm-avatar';
 import {
   AgentControlBar,
   type ControlBarControls,
@@ -38,7 +39,7 @@ const BOTTOM_VIEW_MOTION_PROPS = {
     delay: 0.5,
     ease: 'easeOut',
   },
-};
+} as const;
 
 interface FadeProps {
   top?: boolean;
@@ -71,7 +72,9 @@ export const SessionView = ({
 
   const messages = useChatMessages();
   const [chatOpen, setChatOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const micToggleRef = useRef<(() => void) | null>(null);
 
   const controls: ControlBarControls = {
     leave: true,
@@ -79,6 +82,7 @@ export const SessionView = ({
     chat: appConfig.supportsChatInput,
     camera: appConfig.supportsVideoInput,
     screenShare: appConfig.supportsVideoInput,
+    avatar: true,
   };
 
   useEffect(() => {
@@ -89,6 +93,25 @@ export const SessionView = ({
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Keyboard hotkey for mic toggle (Space bar)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only toggle if Space is pressed and not typing in an input/textarea
+      if (
+        event.code === 'Space' &&
+        event.target instanceof HTMLElement &&
+        !['INPUT', 'TEXTAREA'].includes(event.target.tagName) &&
+        !event.target.isContentEditable
+      ) {
+        event.preventDefault();
+        micToggleRef.current?.();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <section className="bg-background relative z-10 h-full w-full overflow-hidden" {...props}>
@@ -112,17 +135,27 @@ export const SessionView = ({
       {/* Tile Layout */}
       <TileLayout chatOpen={chatOpen} />
 
+      {/* VRM Avatar */}
+      <VRMAvatar visible={avatarOpen} />
+
       {/* Bottom */}
       <MotionBottom
         {...BOTTOM_VIEW_MOTION_PROPS}
-        className="fixed inset-x-3 bottom-0 z-50 md:inset-x-12"
+        className="fixed inset-x-3 bottom-0 z-[70] md:inset-x-12"
       >
         {appConfig.isPreConnectBufferEnabled && (
           <PreConnectMessage messages={messages} className="pb-4" />
         )}
         <div className="bg-background relative mx-auto max-w-2xl pb-3 md:pb-12">
           <Fade bottom className="absolute inset-x-0 top-0 h-4 -translate-y-full" />
-          <AgentControlBar controls={controls} onChatOpenChange={setChatOpen} />
+          <AgentControlBar
+            controls={controls}
+            onChatOpenChange={setChatOpen}
+            onAvatarOpenChange={setAvatarOpen}
+            onMicToggleReady={(toggleFn: () => void) => {
+              micToggleRef.current = toggleFn;
+            }}
+          />
         </div>
       </MotionBottom>
     </section>

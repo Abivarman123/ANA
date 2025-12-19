@@ -18,7 +18,7 @@ const ANIMATION_TRANSITION = {
   stiffness: 675,
   damping: 75,
   mass: 1,
-};
+} as const;
 
 const classNames = {
   // GRID

@@ -6,7 +6,7 @@ import logging
 import os
 
 from livekit.agents import AgentSession, ChatContext, function_tool
-from mem0 import MemoryClient
+from mem0 import AsyncMemoryClient
 
 MEMORY_FILTER_PROMPT = """Extract ONLY long-term, meaningful information. Be highly selective.
 
@@ -28,244 +28,185 @@ STRICT EXCLUSIONS - DO NOT STORE:
 - Sensitive data: Phone numbers, addresses, passwords, API keys, financial info
 
 RULES:
-- If unsure whether to store, DON'T store it
 - Only store facts useful for >30 days
 - Merge similar memories instead of duplicating
 - Respect "don't remember this" requests
-- Use concise third-person format with important details"""
+"""
 
 
 def get_mem0_client():
     """Get or create mem0 client instance."""
     mem0_api_key = os.getenv("MEM0_API_KEY")
-    if not mem0_api_key:
-        return None
-    return MemoryClient(api_key=mem0_api_key)
+    return AsyncMemoryClient(api_key=mem0_api_key) if mem0_api_key else None
+
+
+async def verify_custom_instructions(mem0) -> bool:
+    """Verify that custom instructions are properly set."""
+    if not mem0:
+        return False
+
+    try:
+        project_info = await mem0.project.get(fields=["custom_instructions"])
+        current_instructions = (
+            project_info.get("custom_instructions", "") if project_info else ""
+        )
+
+        if not current_instructions:
+            logging.warning("⚠ Custom instructions are empty")
+            return False
+
+        key_phrases = ["STRICT EXCLUSIONS", "DO NOT STORE", "routine commands"]
+        if sum(1 for p in key_phrases if p in current_instructions) >= 2:
+            logging.info(
+                f"✓ Custom instructions verified ({len(current_instructions)} chars)"
+            )
+            return True
+
+        logging.warning("⚠ Custom instructions may be outdated")
+        return False
+    except Exception as e:
+        logging.error(f"Failed to verify custom instructions: {e}")
+        return False
+
+
+def format_memory_results(results):
+    """Format memory results into readable strings."""
+    memories = []
+    for idx, result in enumerate(results, 1):
+        entry = f"{idx}. {result.get('memory', '')}"
+        if cats := result.get("categories"):
+            entry += f" [Categories: {', '.join(cats)}]"
+        if updated := result.get("updated_at"):
+            entry += f" (Updated: {updated[:10]})"
+        memories.append(entry)
+    return memories
 
 
 @function_tool()
-async def search_memories(
-    query: str,
-    limit: int = 5,
-) -> str:
-    """
-    Search for relevant memories from past conversations.
-    Use this when you need additional context about the user that isn't in the current conversation.
+async def search_memories(query: str, limit: int = 5) -> str:
+    """Search for relevant memories from past conversations."""
+    logging.info(f"Searching memories: {query}, limit: {limit}")
 
-    Args:
-        query: The search query to find relevant memories (e.g., 'user preferences', 'past projects', 'skills')
-        limit: Maximum number of memories to retrieve (default: 5, max: 20)
-
-    Examples:
-    - "What are the user's preferences for file organization?"
-    - "What projects has the user worked on?"
-    - "What are the user's skills and interests?"
-    """
     mem0 = get_mem0_client()
     if not mem0:
         return "Memory system is not available. MEM0_API_KEY not configured."
 
     try:
-        # Limit to max 20 to avoid overwhelming context
-        limit = min(limit, 20)
-
-        # Search memories for the user (run in executor to avoid blocking)
-        loop = asyncio.get_event_loop()
-        results = await loop.run_in_executor(
-            None,
-            lambda: mem0.search(
-                query=query, filters={"user_id": "abivarman"}, limit=limit
-            ),
+        results = await mem0.search(
+            query=query, filters={"user_id": "abivarman"}, limit=min(limit, 20)
         )
 
         if not results or not results.get("results"):
             return f"No relevant memories found for query: {query}"
 
-        # Format the results
-        memories = []
-        for idx, result in enumerate(results["results"], 1):
-            memory_text = result.get("memory", "")
-            categories = result.get("categories", [])
-            updated_at = result.get("updated_at", "")
-
-            memory_entry = f"{idx}. {memory_text}"
-            if categories:
-                memory_entry += f" [Categories: {', '.join(categories)}]"
-            if updated_at:
-                memory_entry += f" (Updated: {updated_at[:10]})"
-
-            memories.append(memory_entry)
-
+        memories = format_memory_results(results["results"])
+        logging.info(f"Retrieved {len(memories)} memories")
         return f"Found {len(memories)} relevant memories:\n\n" + "\n".join(memories)
-
     except Exception as e:
         logging.error(f"Error searching memories: {e}")
         return f"Failed to search memories: {str(e)}"
 
 
 @function_tool()
-async def get_recent_memories(
-    count: int = 10,
-) -> str:
-    """
-    Retrieve the most recent memories about the user.
-    Use this to get a quick overview of recent interactions and information.
+async def get_recent_memories(count: int = 10) -> str:
+    """Retrieve the most recent memories about the user."""
+    logging.info(f"Retrieving {count} recent memories")
 
-    Args:
-        count: Number of recent memories to retrieve (default: 10, max: 20)
-    """
     mem0 = get_mem0_client()
     if not mem0:
         return "Memory system is not available. MEM0_API_KEY not configured."
 
     try:
-        # Limit to max 20
-        count = min(count, 20)
-
-        # Get recent memories (sorted by updated_at descending, run in executor)
-        loop = asyncio.get_event_loop()
-        results = await loop.run_in_executor(
-            None,
-            lambda: mem0.get_all(
-                filters={"user_id": "abivarman"}, page=1, page_size=count
-            ),
+        results = await mem0.get_all(
+            filters={"user_id": "abivarman"}, page=1, page_size=min(count, 20)
+        )
+        memory_list = (
+            results.get("results", [])
+            if isinstance(results, dict)
+            else (results if isinstance(results, list) else [])
         )
 
-        if not results or not results.get("results"):
-            return "No memories found."
+        if not memory_list:
+            return "No recent memories found."
 
-        # Handle both dict and list responses
-        if isinstance(results, dict):
-            memory_list = results.get("results", [])
-        elif isinstance(results, list):
-            memory_list = results
-        else:
-            return "Unexpected response format from memory system."
-
-        # Format the results
-        memories = []
-        for idx, result in enumerate(memory_list, 1):
-            memory_text = result.get("memory", "")
-            categories = result.get("categories", [])
-            updated_at = result.get("updated_at", "")
-
-            memory_entry = f"{idx}. {memory_text}"
-            if categories:
-                memory_entry += f" [Categories: {', '.join(categories)}]"
-            if updated_at:
-                memory_entry += f" (Updated: {updated_at[:10]})"
-
-            memories.append(memory_entry)
-
+        memories = format_memory_results(memory_list)
+        logging.info(f"Retrieved {len(memories)} recent memories")
         return f"Retrieved {len(memories)} recent memories:\n\n" + "\n".join(memories)
-
     except Exception as e:
         logging.error(f"Error retrieving recent memories: {e}")
         return f"Failed to retrieve recent memories: {str(e)}"
 
 
 async def initialize_mem0_client():
-    """Initialize Mem0 client with custom instructions.
-
-    Returns:
-        MemoryClient or None: Initialized client or None if API key not available
-    """
+    """Initialize Mem0 client with custom instructions."""
     mem0_api_key = os.getenv("MEM0_API_KEY")
     if not mem0_api_key:
+        logging.warning("MEM0_API_KEY not found. Memory features disabled.")
         return None
 
-    mem0 = MemoryClient(api_key=mem0_api_key)
+    logging.info("Initializing Mem0 client...")
+    mem0 = AsyncMemoryClient(api_key=mem0_api_key)
 
-    # Configure custom instructions (skip verification for speed)
-    # Run in executor to avoid blocking
     try:
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(
-            None, lambda: mem0.project.update(custom_instructions=MEMORY_FILTER_PROMPT)
-        )
+        await mem0.project.update(custom_instructions=MEMORY_FILTER_PROMPT)
+        logging.info("✓ Custom instructions updated")
+
+        if not await verify_custom_instructions(mem0):
+            logging.warning("⚠ Custom instructions verification failed")
     except Exception as e:
         logging.error(f"Failed to set custom instructions: {e}")
 
+    logging.info(
+        "Mem0 client initialized. Note: Instructions only apply to NEW memories"
+    )
     return mem0
 
 
-async def load_initial_memories(mem0, user_name: str = "abivarman", count: int = 5):
-    """Load initial memories at startup.
+async def load_initial_memories(mem0, user_name: str = "abivarman", count: int = 10):
+    """Load initial memories at startup."""
+    if not mem0:
+        return [], ""
 
-    Args:
-        mem0: MemoryClient instance
-        user_name: User ID for memory retrieval
-        count: Number of recent memories to load (default: 5, reduced for speed)
-
-    Returns:
-        tuple: (results list, memory_str for filtering)
-    """
     try:
-        if not mem0:
-            return [], ""
+        logging.info(f"Retrieving recent memories for: {user_name}")
+        response = await mem0.get_all(filters={"user_id": user_name}, page=1, page_size=count)
 
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: mem0.get_all(
-                filters={"user_id": user_name},
-                page=1,
-                page_size=count,
-            ),
+        results = (
+            response.get("results", [])
+            if isinstance(response, dict)
+            else (response if isinstance(response, list) else [])
         )
 
-        # Handle both list and dict responses
-        if isinstance(response, dict):
-            results = response.get("results", [])
-        elif isinstance(response, list):
-            results = response
-        else:
-            results = []
-
-        # Create memory string for filtering
         if results:
             memories = [
-                {"memory": result["memory"], "updated_at": result.get("updated_at", "")}
-                for result in results
+                {"memory": r["memory"], "updated_at": r.get("updated_at", "")}
+                for r in results
             ]
-            memory_str = json.dumps(memories)
-            return results, memory_str
-        else:
-            return [], ""
+            logging.info(f"Loaded {len(memories)} memories at startup")
+            return results, json.dumps(memories)
 
+        logging.info("No existing memories found")
+        return [], ""
     except Exception as e:
         logging.error(f"Failed to retrieve memories: {e}")
         return [], ""
 
 
 def create_memory_context(results, user_name: str = "abivarman", has_mem0: bool = True):
-    """Create initial chat context with loaded memories.
-
-    Args:
-        results: List of memory results from Mem0
-        user_name: User's name
-        has_mem0: Whether Mem0 client is available
-
-    Returns:
-        ChatContext: Initial context with memory information
-    """
+    """Create initial chat context with loaded memories."""
     initial_ctx = ChatContext()
 
     if results:
         memories = [
-            {"memory": result["memory"], "updated_at": result.get("updated_at", "")}
-            for result in results
+            {"memory": r["memory"], "updated_at": r.get("updated_at", "")}
+            for r in results
         ]
+        memory_context = f"The user's name is {user_name}. Here are the {len(memories)} most recent memories: {json.dumps(memories)}."
 
-        # Inform the agent about available memories and tools
-        memory_context = f"The user's name is {user_name}. Here are the {len(memories)} most recent memories about him: {json.dumps(memories)}."
         if has_mem0:
             memory_context += " Use search_memories() or get_recent_memories() tools to retrieve additional context when needed."
 
-        initial_ctx.add_message(
-            role="assistant",
-            content=memory_context,
-        )
+        initial_ctx.add_message(role="assistant", content=memory_context)
 
     return initial_ctx
 
@@ -273,19 +214,18 @@ def create_memory_context(results, user_name: str = "abivarman", has_mem0: bool 
 async def save_conversation_to_mem0(
     session: AgentSession, mem0, user_name: str = "abivarman", memory_str: str = ""
 ):
-    """Save conversation context to Mem0 on shutdown (single batch operation).
+    """Save conversation context to Mem0 on shutdown."""
+    logging.info("=== Shutdown callback triggered ===")
 
-    Args:
-        session: AgentSession instance with conversation history
-        mem0: MemoryClient instance
-        user_name: User ID for memory storage
-        memory_str: Initial memory string to filter out from saved messages
-    """
-    if not mem0 or not session.history:
+    if not mem0:
+        logging.info("Mem0 client not available, skipping memory save")
+        return
+
+    if not session.history:
+        logging.warning("No conversation history to save")
         return
 
     messages_formatted = []
-
     for item in session.history.items:
         content_str = (
             "".join(item.content)
@@ -293,12 +233,7 @@ async def save_conversation_to_mem0(
             else str(item.content)
         )
 
-        # Skip messages that contain the initial memory context
-        if memory_str and memory_str in content_str:
-            continue
-
-        # Skip empty messages (mem0 API rejects them)
-        if not content_str or not content_str.strip():
+        if (memory_str and memory_str in content_str) or not content_str.strip():
             continue
 
         if item.role in ["user", "assistant"]:
@@ -307,11 +242,11 @@ async def save_conversation_to_mem0(
             )
 
     if messages_formatted:
+        logging.info(f"Saving {len(messages_formatted)} messages to memory")
         try:
-            # Single API call to save all conversation messages (run in executor)
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(
-                None, lambda: mem0.add(messages_formatted, user_id=user_name)
-            )
+            await mem0.add(messages_formatted, user_id=user_name)
+            logging.info(f"✓ Chat context saved ({len(messages_formatted)} messages)")
         except Exception as e:
-            logging.error(f"Failed to save conversation to mem0: {e}")
+            logging.error(f"Failed to save conversation: {e}")
+    else:
+        logging.info("No messages to save to memory")

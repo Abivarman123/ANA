@@ -23,7 +23,7 @@ def handle_tool_error(tool_name: str) -> Callable:
                 return await func(*args, **kwargs)
             except Exception as e:
                 logging.error(f"Error in {tool_name}: {e}")
-                return f"An error occurred in {tool_name}: {str(e)}"  # type: ignore
+                return f"An error occurred in {tool_name}: {e}"  # type: ignore
 
         return wrapper
 

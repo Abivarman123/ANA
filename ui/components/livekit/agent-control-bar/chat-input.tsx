@@ -21,7 +21,7 @@ const MOTION_PROPS = {
     duration: 0.3,
     ease: 'easeOut',
   },
-};
+} as const;
 
 interface ChatInputProps {
   chatOpen: boolean;
@@ -32,7 +32,7 @@ interface ChatInputProps {
 export function ChatInput({
   chatOpen,
   isAgentAvailable = false,
-  onSend = async () => {},
+  onSend = async () => { },
 }: ChatInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isSending, setIsSending] = useState(false);

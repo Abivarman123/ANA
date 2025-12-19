@@ -1,6 +1,4 @@
-"""Main agent implementation for ANA."""
-
-import asyncio
+"""Main agent implementation for ANA with extended session support."""
 
 from google.genai import types
 from livekit import agents
@@ -8,7 +6,7 @@ from livekit.agents import Agent, AgentSession, RoomInputOptions
 from livekit.plugins import google, noise_cancellation
 
 from .config import config
-from .prompts import AGENT_INSTRUCTION, SESSION_INSTRUCTION
+from .prompts import NUEROSAMA_MODE, SESSION_INSTRUCTION
 from .tools import get_tools
 from .tools.memory import (
     create_memory_context,
@@ -20,17 +18,28 @@ from .tools.system import close_terminal_window
 
 
 class Assistant(Agent):
-    """ANA Assistant agent."""
+    """ANA Assistant agent with extended session support."""
 
     def __init__(self, chat_ctx=None) -> None:
-        """Initialize the agent."""
+        realtime_input_cfg = types.RealtimeInputConfig(
+            automatic_activity_detection=types.AutomaticActivityDetection(
+                prefix_padding_ms=5,
+                silence_duration_ms=120,
+            ),
+        )
         super().__init__(
-            instructions=AGENT_INSTRUCTION,
+            instructions=NUEROSAMA_MODE,
             llm=google.beta.realtime.RealtimeModel(
                 model=config.model["model_name"],
-                _gemini_tools=[types.GoogleSearch()],
+                # _gemini_tools=[types.GoogleSearch()],
                 voice=config.model["voice"],
                 temperature=config.model["temperature"],
+                context_window_compression=types.ContextWindowCompressionConfig(
+                    sliding_window=types.SlidingWindow(),
+                    trigger_tokens=8000,
+                ),
+                session_resumption=types.SessionResumptionConfig(handle=None),
+                realtime_input_config=realtime_input_cfg,
             ),
             tools=[],  # Tools will be set after async initialization
             chat_ctx=chat_ctx,
@@ -39,63 +48,40 @@ class Assistant(Agent):
 
 async def entrypoint(ctx: agents.JobContext):
     """Main entrypoint for the agent."""
+    await ctx.connect()
+
     session = AgentSession()
     user_name = config.get("user_name")
 
-    # Parallel initialization for faster startup
-    async def init_memory():
-        """Initialize mem0 in parallel."""
-        try:
-            # Initialize mem0 client (already async)
-            mem0 = await initialize_mem0_client()
-            # Load initial memories (now async)
-            results, memory_str = await load_initial_memories(mem0, user_name, 5)
-            return mem0, results, memory_str
-        except Exception as e:
-            agents.logger.warning(f"Failed to initialize memory: {e}")
-            return None, [], ""
-
-    async def init_tools():
-        """Get tools (runs in parallel)."""
-        # Run in executor to avoid blocking
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, get_tools)
-
-    # Run mem0 and tool initialization in parallel
-    (mem0, results, memory_str), tools = await asyncio.gather(
-        init_memory(),
-        init_tools(),
-    )
-
-    initial_ctx = create_memory_context(results, user_name, has_mem0=mem0 is not None)
-
-    # Define shutdown hook for saving conversation to Mem0
-    async def save_conversation():
-        """Wrapper for save_conversation_to_mem0."""
-        await save_conversation_to_mem0(session, mem0, user_name, memory_str)
+    # Initialize Mem0 client
+    try:
+        mem0 = await initialize_mem0_client()
+        results, memory_str = await load_initial_memories(mem0, user_name, count=10)
+        initial_ctx = create_memory_context(results, user_name, has_mem0=True)
+    except Exception:
+        mem0 = None
+        results, memory_str = [], ""
+        initial_ctx = create_memory_context([], user_name, has_mem0=False)
 
     # Register shutdown callbacks
-    ctx.add_shutdown_callback(save_conversation)
+    async def save_memory_callback():
+        await save_conversation_to_mem0(session, mem0, user_name, memory_str)
+
+    ctx.add_shutdown_callback(save_memory_callback)
     ctx.add_shutdown_callback(close_terminal_window)
 
-    # Create assistant with pre-loaded tools
+    # Create and start assistant
     assistant = Assistant(chat_ctx=initial_ctx)
-    assistant._tools = tools  # Use pre-loaded tools
 
     await session.start(
         room=ctx.room,
         agent=assistant,
         room_input_options=RoomInputOptions(
-            video_enabled=False,
             noise_cancellation=noise_cancellation.BVC(),
         ),
     )
 
-    await ctx.connect()
-
-    await session.generate_reply(
-        instructions=SESSION_INSTRUCTION,
-    )
+    await session.generate_reply(instructions=SESSION_INSTRUCTION)
 
 
 if __name__ == "__main__":

@@ -47,7 +47,7 @@ class ArduinoController:
             return self._connection
         return None
 
-    def send_command(self, command: str) -> str:
+    async def send_command(self, command: str) -> str:
         """Send command to Arduino and return response or skip if unavailable."""
         if not self._initialized:
             self._initialize_connection()
@@ -57,10 +57,13 @@ class ArduinoController:
         try:
             # Run blocking I/O in executor
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, lambda: conn.write(f"{command}\n".encode()))
+            await loop.run_in_executor(
+                None, lambda: conn.write(f"{command}\n".encode())
+            )
             await asyncio.sleep(0.1)
             response = await loop.run_in_executor(
-                None, lambda: conn.readline().decode().strip() if conn.in_waiting else "OK"
+                None,
+                lambda: conn.readline().decode().strip() if conn.in_waiting else "OK",
             )
             return response
         except Exception as e:

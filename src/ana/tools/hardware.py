@@ -20,6 +20,9 @@ class ArduinoController:
         self._config = config.hardware
         self._available = False  # <- track availability
         self._initialized = False  # <- track if initialization was attempted
+        self._init_lock = (
+            asyncio.Lock()
+        )  # <- lock to prevent race condition during initialization
 
     def _initialize_connection(self) -> None:
         """Attempt to establish Arduino connection once at startup."""
@@ -50,7 +53,12 @@ class ArduinoController:
     async def send_command(self, command: str) -> str:
         """Send command to Arduino and return response or skip if unavailable."""
         if not self._initialized:
-            self._initialize_connection()
+            async with self._init_lock:
+                # Double-check inside the lock to prevent duplicate initializations
+                if not self._initialized:
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(None, self._initialize_connection)
+
         conn = self.get_connection()
         if not conn:
             return "⚠️ Arduino not connected"

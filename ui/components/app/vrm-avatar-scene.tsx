@@ -341,12 +341,20 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
 
         // Update expression transition progress
         if (expressionTransitionProgress < 1) {
-          expressionTransitionProgress = Math.min(1, expressionTransitionProgress + deltaTime * 0.8);
+          expressionTransitionProgress = Math.min(
+            1,
+            expressionTransitionProgress + deltaTime * 0.8
+          );
         }
 
         // Smooth expression intensity
         const easedTransition = easeInOutQuad(expressionTransitionProgress);
-        expressionIntensity = smoothLerp(expressionIntensity, targetExpressionIntensity, 0.08, deltaTime);
+        expressionIntensity = smoothLerp(
+          expressionIntensity,
+          targetExpressionIntensity,
+          0.08,
+          deltaTime
+        );
 
         // Natural blinking
         if (elapsedTime >= nextBlinkTime && !isSpeaking) {
@@ -376,7 +384,7 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
         mouthShapes.oh = smoothLerp(mouthShapes.oh, targetMouthShapes.oh, 0.25, deltaTime);
 
         // Set expression targets based on current expression
-        Object.keys(targetExpressionValues).forEach(key => {
+        Object.keys(targetExpressionValues).forEach((key) => {
           if (key !== 'blink') {
             targetExpressionValues[key as keyof typeof targetExpressionValues] = 0;
           }
@@ -400,9 +408,14 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
         }
 
         // Smooth all expression values
-        Object.keys(expressionValues).forEach(key => {
+        Object.keys(expressionValues).forEach((key) => {
           const k = key as keyof typeof expressionValues;
-          expressionValues[k] = smoothLerp(expressionValues[k], targetExpressionValues[k], 0.1, deltaTime);
+          expressionValues[k] = smoothLerp(
+            expressionValues[k],
+            targetExpressionValues[k],
+            0.1,
+            deltaTime
+          );
         });
 
         // Apply expressions to VRM
@@ -462,7 +475,10 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
 
               // Smooth gesture transition
               if (gestureTransitionProgress < 1) {
-                gestureTransitionProgress = Math.min(1, gestureTransitionProgress + deltaTime * 1.5);
+                gestureTransitionProgress = Math.min(
+                  1,
+                  gestureTransitionProgress + deltaTime * 1.5
+                );
               }
               const easedGestureTransition = easeInOutQuad(gestureTransitionProgress);
 
@@ -521,9 +537,15 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
               }
 
               // Blend between previous and new gesture
-              targetHeadRotation.x = previousHeadRotation.x + (newTargetHeadRotation.x - previousHeadRotation.x) * easedGestureTransition;
-              targetHeadRotation.y = previousHeadRotation.y + (newTargetHeadRotation.y - previousHeadRotation.y) * easedGestureTransition;
-              targetHeadRotation.z = previousHeadRotation.z + (newTargetHeadRotation.z - previousHeadRotation.z) * easedGestureTransition;
+              targetHeadRotation.x =
+                previousHeadRotation.x +
+                (newTargetHeadRotation.x - previousHeadRotation.x) * easedGestureTransition;
+              targetHeadRotation.y =
+                previousHeadRotation.y +
+                (newTargetHeadRotation.y - previousHeadRotation.y) * easedGestureTransition;
+              targetHeadRotation.z =
+                previousHeadRotation.z +
+                (newTargetHeadRotation.z - previousHeadRotation.z) * easedGestureTransition;
 
               targetNeckRotation.x = newTargetNeckRotation.x;
               targetNeckRotation.y = newTargetNeckRotation.y;
@@ -595,7 +617,8 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
 
             targetRightArmRotation.x = Math.sin(elapsedTime * 1.1 + 1.5) * gestureIntensity * 1.2;
             targetRightArmRotation.y = -Math.cos(elapsedTime * 0.85) * gestureIntensity * 0.7;
-            targetRightArmRotation.z = 1.2 - Math.sin(elapsedTime * 0.75 + 1.5) * gestureIntensity * 0.6;
+            targetRightArmRotation.z =
+              1.2 - Math.sin(elapsedTime * 0.75 + 1.5) * gestureIntensity * 0.6;
 
             // Smooth lower arm movement
             const lowerArmIntensity = gestureIntensity * 1.1;
@@ -632,23 +655,93 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
           }
 
           // Ultra smooth arm interpolation
-          leftArmRotation.x = smoothLerp(leftArmRotation.x, targetLeftArmRotation.x, 0.1, deltaTime);
-          leftArmRotation.y = smoothLerp(leftArmRotation.y, targetLeftArmRotation.y, 0.1, deltaTime);
-          leftArmRotation.z = smoothLerp(leftArmRotation.z, targetLeftArmRotation.z, 0.1, deltaTime);
+          leftArmRotation.x = smoothLerp(
+            leftArmRotation.x,
+            targetLeftArmRotation.x,
+            0.1,
+            deltaTime
+          );
+          leftArmRotation.y = smoothLerp(
+            leftArmRotation.y,
+            targetLeftArmRotation.y,
+            0.1,
+            deltaTime
+          );
+          leftArmRotation.z = smoothLerp(
+            leftArmRotation.z,
+            targetLeftArmRotation.z,
+            0.1,
+            deltaTime
+          );
 
-          rightArmRotation.x = smoothLerp(rightArmRotation.x, targetRightArmRotation.x, 0.1, deltaTime);
-          rightArmRotation.y = smoothLerp(rightArmRotation.y, targetRightArmRotation.y, 0.1, deltaTime);
-          rightArmRotation.z = smoothLerp(rightArmRotation.z, targetRightArmRotation.z, 0.1, deltaTime);
+          rightArmRotation.x = smoothLerp(
+            rightArmRotation.x,
+            targetRightArmRotation.x,
+            0.1,
+            deltaTime
+          );
+          rightArmRotation.y = smoothLerp(
+            rightArmRotation.y,
+            targetRightArmRotation.y,
+            0.1,
+            deltaTime
+          );
+          rightArmRotation.z = smoothLerp(
+            rightArmRotation.z,
+            targetRightArmRotation.z,
+            0.1,
+            deltaTime
+          );
 
-          leftLowerArmRotation.x = smoothLerp(leftLowerArmRotation.x, targetLeftLowerArmRotation.x, 0.1, deltaTime);
-          rightLowerArmRotation.x = smoothLerp(rightLowerArmRotation.x, targetRightLowerArmRotation.x, 0.1, deltaTime);
+          leftLowerArmRotation.x = smoothLerp(
+            leftLowerArmRotation.x,
+            targetLeftLowerArmRotation.x,
+            0.1,
+            deltaTime
+          );
+          rightLowerArmRotation.x = smoothLerp(
+            rightLowerArmRotation.x,
+            targetRightLowerArmRotation.x,
+            0.1,
+            deltaTime
+          );
 
-          handRotation.left.x = smoothLerp(handRotation.left.x, targetHandRotation.left.x, 0.1, deltaTime);
-          handRotation.left.y = smoothLerp(handRotation.left.y, targetHandRotation.left.y, 0.1, deltaTime);
-          handRotation.left.z = smoothLerp(handRotation.left.z, targetHandRotation.left.z, 0.1, deltaTime);
-          handRotation.right.x = smoothLerp(handRotation.right.x, targetHandRotation.right.x, 0.1, deltaTime);
-          handRotation.right.y = smoothLerp(handRotation.right.y, targetHandRotation.right.y, 0.1, deltaTime);
-          handRotation.right.z = smoothLerp(handRotation.right.z, targetHandRotation.right.z, 0.1, deltaTime);
+          handRotation.left.x = smoothLerp(
+            handRotation.left.x,
+            targetHandRotation.left.x,
+            0.1,
+            deltaTime
+          );
+          handRotation.left.y = smoothLerp(
+            handRotation.left.y,
+            targetHandRotation.left.y,
+            0.1,
+            deltaTime
+          );
+          handRotation.left.z = smoothLerp(
+            handRotation.left.z,
+            targetHandRotation.left.z,
+            0.1,
+            deltaTime
+          );
+          handRotation.right.x = smoothLerp(
+            handRotation.right.x,
+            targetHandRotation.right.x,
+            0.1,
+            deltaTime
+          );
+          handRotation.right.y = smoothLerp(
+            handRotation.right.y,
+            targetHandRotation.right.y,
+            0.1,
+            deltaTime
+          );
+          handRotation.right.z = smoothLerp(
+            handRotation.right.z,
+            targetHandRotation.right.z,
+            0.1,
+            deltaTime
+          );
 
           // Apply smoothed rotations
           if (leftUpperArm) {
@@ -686,14 +779,34 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
             if (leftShoulder) {
               const targetShoulderZ = Math.sin(elapsedTime * 1.3) * 0.03;
               const targetShoulderY = Math.cos(elapsedTime * 1.1) * 0.015;
-              leftShoulder.rotation.z = smoothLerp(leftShoulder.rotation.z, targetShoulderZ, 0.08, deltaTime);
-              leftShoulder.rotation.y = smoothLerp(leftShoulder.rotation.y, targetShoulderY, 0.08, deltaTime);
+              leftShoulder.rotation.z = smoothLerp(
+                leftShoulder.rotation.z,
+                targetShoulderZ,
+                0.08,
+                deltaTime
+              );
+              leftShoulder.rotation.y = smoothLerp(
+                leftShoulder.rotation.y,
+                targetShoulderY,
+                0.08,
+                deltaTime
+              );
             }
             if (rightShoulder) {
               const targetShoulderZ = -Math.sin(elapsedTime * 1.3) * 0.03;
               const targetShoulderY = -Math.cos(elapsedTime * 1.1) * 0.015;
-              rightShoulder.rotation.z = smoothLerp(rightShoulder.rotation.z, targetShoulderZ, 0.08, deltaTime);
-              rightShoulder.rotation.y = smoothLerp(rightShoulder.rotation.y, targetShoulderY, 0.08, deltaTime);
+              rightShoulder.rotation.z = smoothLerp(
+                rightShoulder.rotation.z,
+                targetShoulderZ,
+                0.08,
+                deltaTime
+              );
+              rightShoulder.rotation.y = smoothLerp(
+                rightShoulder.rotation.y,
+                targetShoulderY,
+                0.08,
+                deltaTime
+              );
             }
           } else {
             if (leftShoulder) {
@@ -715,16 +828,36 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
 
           // Finger animations for more natural look
           const fingerBones = [
-            'leftThumbProximal', 'leftThumbIntermediate', 'leftThumbDistal',
-            'leftIndexProximal', 'leftIndexIntermediate', 'leftIndexDistal',
-            'leftMiddleProximal', 'leftMiddleIntermediate', 'leftMiddleDistal',
-            'leftRingProximal', 'leftRingIntermediate', 'leftRingDistal',
-            'leftLittleProximal', 'leftLittleIntermediate', 'leftLittleDistal',
-            'rightThumbProximal', 'rightThumbIntermediate', 'rightThumbDistal',
-            'rightIndexProximal', 'rightIndexIntermediate', 'rightIndexDistal',
-            'rightMiddleProximal', 'rightMiddleIntermediate', 'rightMiddleDistal',
-            'rightRingProximal', 'rightRingIntermediate', 'rightRingDistal',
-            'rightLittleProximal', 'rightLittleIntermediate', 'rightLittleDistal'
+            'leftThumbProximal',
+            'leftThumbIntermediate',
+            'leftThumbDistal',
+            'leftIndexProximal',
+            'leftIndexIntermediate',
+            'leftIndexDistal',
+            'leftMiddleProximal',
+            'leftMiddleIntermediate',
+            'leftMiddleDistal',
+            'leftRingProximal',
+            'leftRingIntermediate',
+            'leftRingDistal',
+            'leftLittleProximal',
+            'leftLittleIntermediate',
+            'leftLittleDistal',
+            'rightThumbProximal',
+            'rightThumbIntermediate',
+            'rightThumbDistal',
+            'rightIndexProximal',
+            'rightIndexIntermediate',
+            'rightIndexDistal',
+            'rightMiddleProximal',
+            'rightMiddleIntermediate',
+            'rightMiddleDistal',
+            'rightRingProximal',
+            'rightRingIntermediate',
+            'rightRingDistal',
+            'rightLittleProximal',
+            'rightLittleIntermediate',
+            'rightLittleDistal',
           ];
 
           if (isSpeaking && speechIntensity > 0.3) {
@@ -732,7 +865,8 @@ export default function VRMAvatarScene({ modelPath, audioTrack }: VRMAvatarScene
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const bone = vrm!.humanoid.getNormalizedBoneNode(boneName as any);
               if (bone) {
-                const fingerCurl = Math.sin(elapsedTime * 1.5 + index * 0.2) * speechIntensity * 0.15;
+                const fingerCurl =
+                  Math.sin(elapsedTime * 1.5 + index * 0.2) * speechIntensity * 0.15;
                 bone.rotation.z = smoothLerp(bone.rotation.z, fingerCurl, 0.1, deltaTime);
               }
             });

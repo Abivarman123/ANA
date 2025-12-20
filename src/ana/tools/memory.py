@@ -169,7 +169,9 @@ async def load_initial_memories(mem0, user_name: str = "abivarman", count: int =
 
     try:
         logging.info(f"Retrieving recent memories for: {user_name}")
-        response = await mem0.get_all(filters={"user_id": user_name}, page=1, page_size=count)
+        response = await mem0.get_all(
+            filters={"user_id": user_name}, page=1, page_size=count
+        )
 
         results = (
             response.get("results", [])

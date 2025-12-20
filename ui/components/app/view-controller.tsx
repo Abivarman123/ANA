@@ -6,8 +6,8 @@ import { useRoomContext } from '@livekit/components-react';
 import { Gear } from '@phosphor-icons/react/dist/ssr';
 import { useSession } from '@/components/app/session-provider';
 import { SessionView } from '@/components/app/session-view';
-import { WelcomeView } from '@/components/app/welcome-view';
 import { SettingsModal } from '@/components/app/settings-modal';
+import { WelcomeView } from '@/components/app/welcome-view';
 import { Button } from '@/components/livekit/button';
 
 const MotionWelcomeView = motion.create(WelcomeView);

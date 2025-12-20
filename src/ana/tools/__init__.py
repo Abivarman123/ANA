@@ -39,7 +39,7 @@ class ToolRegistry:
         """Register default tools (cached after first call)."""
         if self._cached:
             return
-        
+
         self._tools = [
             get_weather,
             search_web,

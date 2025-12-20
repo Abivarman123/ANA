@@ -1,11 +1,13 @@
 # VRM Avatar Animation System
 
 ## Overview
+
 Comprehensive natural animation system with real-time lip-sync, smooth interpolated movements, and human-like body language for the VRM avatar.
 
 ## Features
 
 ### 1. **Audio-Driven Lip-Sync**
+
 - Real-time audio analysis using Web Audio API
 - Frequency band analysis (low, mid, high) for natural mouth shapes
 - Viseme-based mouth movements:
@@ -16,14 +18,18 @@ Comprehensive natural animation system with real-time lip-sync, smooth interpola
 - Smooth transitions between speaking and idle states
 
 ### 2. **Smooth Interpolation System**
+
 All movements use linear interpolation (lerp) for fluid, natural transitions:
+
 - **Head movements**: 0.05 lerp factor (very smooth)
 - **Arm movements**: 0.08 lerp factor (smooth)
 - **No sudden jumps**: All rotations transition gradually
 - **Prevents jitter**: Smooth blending between animation states
 
 ### 3. **Natural Head Movements**
+
 When speaking:
+
 - **Gentle nodding**: Vertical head movement (reduced intensity)
 - **Subtle tilting**: Side-to-side head tilt for expression
 - **Gentle shaking**: Horizontal head movement
@@ -31,12 +37,15 @@ When speaking:
 - **Timed gestures**: New gesture every 2-4 seconds (not random)
 
 When idle:
+
 - Very gentle looking around
 - Minimal vertical and horizontal movements
 - Smooth, continuous motion
 
 ### 4. **Body Language & Gestures**
+
 When speaking:
+
 - **Gentle arm gestures**: Reduced intensity (max 0.1 radians), slower movement (0.6-0.8 Hz)
 - **Smooth hand movements**: Subtle articulation with interpolation
 - **Minimal shoulder movement**: Only during strong emphasis (>0.6 intensity)
@@ -44,12 +53,14 @@ When speaking:
 - **Coordinated movements**: Arms move in natural opposition
 
 When idle:
+
 - Relaxed arm positioning (not T-pose)
 - Very gentle breathing animation
 - Minimal body sway
 - Smooth transitions to speaking pose
 
 ### 5. **Facial Expressions**
+
 - **Natural blinking**: Random intervals (2-5 seconds), pauses during speech
 - **Subtle smile**: Appears when speaking
 - **Expression smoothing**: Gradual transitions between expressions
@@ -57,6 +68,7 @@ When idle:
 ## Technical Implementation
 
 ### Audio Analysis
+
 ```typescript
 - AudioContext with AnalyserNode
 - FFT size: 256
@@ -66,14 +78,17 @@ When idle:
 ```
 
 ### Animation Parameters
+
 - **Speech intensity**: Smoothed with 0.3 lerp factor
-- **Gesture intensity**: 0.3 * speech intensity
+- **Gesture intensity**: 0.3 \* speech intensity
 - **Breathing cycle**: 1.5 Hz sine wave
 - **Sway cycle**: 0.8 Hz sine wave
 - **Random gestures**: 1% chance per frame when speaking
 
 ### Bone Hierarchy
+
 Animated bones:
+
 - Spine, Chest (breathing)
 - Head (gestures, looking)
 - Left/Right Upper Arms (gestures)
@@ -84,6 +99,7 @@ Animated bones:
 ## Usage
 
 The avatar automatically animates when:
+
 1. Audio track is provided via `audioTrack` prop
 2. Agent is speaking (audio volume > threshold)
 3. In idle state (subtle ambient animations)
@@ -101,19 +117,19 @@ Adjust these values in `vrm-avatar-scene.tsx`:
 
 ```typescript
 // Speech detection threshold
-audioVolume > 0.02
+audioVolume > 0.02;
 
 // Gesture intensity
-speechIntensity * 0.3
+speechIntensity * 0.3;
 
 // Mouth shape multipliers
-lowFreq * 0.8  // aa
-highFreq * 0.6 // ih
-midFreq * 0.5  // ou
+lowFreq * 0.8; // aa
+highFreq * 0.6; // ih
+midFreq * 0.5; // ou
 
 // Animation speeds
-elapsedTime * 1.5  // breathing
-elapsedTime * 0.8  // sway
+elapsedTime * 1.5; // breathing
+elapsedTime * 0.8; // sway
 ```
 
 ## Notes

@@ -30,9 +30,9 @@ export async function POST(req: Request) {
   try {
     const configPath = getConfigPath();
     const newConfig = await req.json();
-    
+
     // Optional: Validate config here
-    
+
     await fs.writeFile(configPath, JSON.stringify(newConfig, null, 2), 'utf-8');
     return NextResponse.json({ success: true, config: newConfig });
   } catch (error) {

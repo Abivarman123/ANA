@@ -56,7 +56,9 @@ async def send_email(
         """Blocking email send operation to run in executor."""
         try:
             # Connect to Gmail SMTP server
-            server = smtplib.SMTP(email_config["smtp_server"], email_config["smtp_port"])
+            server = smtplib.SMTP(
+                email_config["smtp_server"], email_config["smtp_port"]
+            )
             server.starttls()
             server.login(email_config["user"], email_config["password"])
 

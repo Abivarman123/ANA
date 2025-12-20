@@ -22,7 +22,7 @@ async def search_web(
     # Lazy import - only load when actually searching
     from langchain_community.tools import DuckDuckGoSearchRun
     import asyncio
-    
+
     # Run blocking search in executor to avoid blocking event loop
     loop = asyncio.get_event_loop()
     results = await loop.run_in_executor(

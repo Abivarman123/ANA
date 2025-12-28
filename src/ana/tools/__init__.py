@@ -2,6 +2,8 @@
 
 from typing import Callable, List
 
+# Chess skill module
+from .chess.skill import analyze_chess_position, get_active_chess_games, get_chess_move
 from .countdown import countdown
 from .email import send_email
 from .file_manager import (
@@ -66,6 +68,10 @@ class ToolRegistry:
             search_memories,
             get_recent_memories,
             countdown,
+            # Chess skills
+            analyze_chess_position,
+            get_chess_move,
+            get_active_chess_games,
         ]
         self._cached = True
 
@@ -128,4 +134,8 @@ __all__ = [
     "search_memories",
     "get_recent_memories",
     "countdown",
+    # Chess skills
+    "analyze_chess_position",
+    "get_chess_move",
+    "get_active_chess_games",
 ]

@@ -1,0 +1,46 @@
+{
+  "user_name": "abivarman",
+  "memories": [
+    {
+      "memory": "User is working on adding a new system to give the assistant more personality.",
+      "updated_at": "2025-12-05T01:24:55.168837-08:00"
+    },
+    {
+      "memory": "User has no friends.",
+      "updated_at": "2025-12-05T01:24:54.164844-08:00"
+    },
+    {
+      "memory": "User hates studying History, Religion, Literature and has to study and memorize many historical facts.",
+      "updated_at": "2025-12-05T01:24:52.835767-08:00"
+    },
+    {
+      "memory": "User will use transcripts to lip sync the VRM model",
+      "updated_at": "2025-11-04T04:01:59.614761-08:00"
+    },
+    {
+      "memory": "User intends body animation synced to assistant's voice",
+      "updated_at": "2025-11-04T04:01:58.588717-08:00"
+    },
+    {
+      "memory": "User plans to use the VRM model as assistant's avatar",
+      "updated_at": "2025-11-04T04:01:56.605109-08:00"
+    },
+    {
+      "memory": "User plans to animate the VRM model",
+      "updated_at": "2025-11-04T04:01:55.581754-08:00"
+    },
+    {
+      "memory": "VRM model is static",
+      "updated_at": "2025-11-04T04:01:54.594849-08:00"
+    },
+    {
+      "memory": "User is checking if assistant has a VRM model",
+      "updated_at": "2025-11-04T04:01:53.604486-08:00"
+    },
+    {
+      "memory": "User added a VRM model for assistant",
+      "updated_at": "2025-11-04T04:01:53.335070-08:00"
+    }
+  ],
+  "dirty": false
+}

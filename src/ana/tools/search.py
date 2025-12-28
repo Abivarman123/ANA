@@ -20,8 +20,9 @@ async def search_web(
 ) -> str:
     """Search the web using DuckDuckGo."""
     # Lazy import - only load when actually searching
-    from langchain_community.tools import DuckDuckGoSearchRun
     import asyncio
+
+    from langchain_community.tools import DuckDuckGoSearchRun
 
     # Run blocking search in executor to avoid blocking event loop
     loop = asyncio.get_event_loop()

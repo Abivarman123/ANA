@@ -1,13 +1,15 @@
 """Main agent implementation for ANA with extended session support."""
 
+import datetime
+import platform
+
 from google.genai import types
 from livekit import agents
 from livekit.agents import Agent, AgentSession, RoomInputOptions
 from livekit.plugins import google, noise_cancellation
 
 from .config import config
-from .prompts import NUEROSAMA_MODE, SESSION_INSTRUCTION
-from .tools import get_tools
+from .prompts import CONTEXT_TEMPLATE, NUEROSAMA_MODE, SESSION_INSTRUCTION
 from .tools.memory import (
     create_memory_context,
     initialize_mem0_client,
@@ -20,18 +22,14 @@ from .tools.system import close_terminal_window
 class Assistant(Agent):
     """ANA Assistant agent with extended session support."""
 
-    def __init__(self, chat_ctx=None) -> None:
+    def __init__(self, instructions: str, chat_ctx=None) -> None:
         realtime_input_cfg = types.RealtimeInputConfig(
-            automatic_activity_detection=types.AutomaticActivityDetection(
-                prefix_padding_ms=5,
-                silence_duration_ms=120,
-            ),
+            automatic_activity_detection=types.AutomaticActivityDetection(),
         )
         super().__init__(
-            instructions=NUEROSAMA_MODE,
+            instructions=instructions,
             llm=google.beta.realtime.RealtimeModel(
                 model=config.model["model_name"],
-                # _gemini_tools=[types.GoogleSearch()],
                 voice=config.model["voice"],
                 temperature=config.model["temperature"],
                 context_window_compression=types.ContextWindowCompressionConfig(
@@ -41,7 +39,7 @@ class Assistant(Agent):
                 session_resumption=types.SessionResumptionConfig(handle=None),
                 realtime_input_config=realtime_input_cfg,
             ),
-            tools=[],  # Tools will be set after async initialization
+            tools=[],
             chat_ctx=chat_ctx,
         )
 
@@ -70,8 +68,16 @@ async def entrypoint(ctx: agents.JobContext):
     ctx.add_shutdown_callback(save_memory_callback)
     ctx.add_shutdown_callback(close_terminal_window)
 
+    # Prepare dynamic system instructions
+    dynamic_context = CONTEXT_TEMPLATE.format(
+        date=datetime.date.today().isoformat(),
+        user_name=user_name,
+        os_name=platform.system(),
+    )
+    full_instructions = f"{dynamic_context}\n{NUEROSAMA_MODE}"
+
     # Create and start assistant
-    assistant = Assistant(chat_ctx=initial_ctx)
+    assistant = Assistant(instructions=full_instructions, chat_ctx=initial_ctx)
 
     await session.start(
         room=ctx.room,

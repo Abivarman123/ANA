@@ -57,7 +57,7 @@ async def send_email(
         try:
             # Connect to Gmail SMTP server
             server = smtplib.SMTP(
-                email_config["smtp_server"], email_config["smtp_port"]
+                email_config["smtp_server"], email_config["smtp_port"], timeout=10
             )
             server.starttls()
             server.login(email_config["user"], email_config["password"])

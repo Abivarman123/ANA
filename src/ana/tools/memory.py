@@ -1,6 +1,5 @@
 """Memory management tools for retrieving user memories from mem0."""
 
-import asyncio
 import json
 import logging
 import os
@@ -32,6 +31,26 @@ RULES:
 - Merge similar memories instead of duplicating
 - Respect "don't remember this" requests
 """
+
+CACHE_FILE = ".memory_cache.json"
+
+
+def _load_cache():
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            logging.warning(f"Failed to load memory cache: {e}")
+    return None
+
+
+def _save_cache(data):
+    try:
+        with open(CACHE_FILE, "w") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        logging.warning(f"Failed to save memory cache: {e}")
 
 
 def get_mem0_client():
@@ -167,6 +186,18 @@ async def load_initial_memories(mem0, user_name: str = "abivarman", count: int =
     if not mem0:
         return [], ""
 
+    # Try to load from cache first
+    cache = _load_cache()
+    if (
+        cache
+        and not cache.get("dirty")
+        and cache.get("user_name") == user_name
+        and cache.get("memories")
+    ):
+        logging.info("Using cached memories")
+        memories = cache["memories"]
+        return memories, json.dumps(memories)
+
     try:
         logging.info(f"Retrieving recent memories for: {user_name}")
         response = await mem0.get_all(
@@ -184,6 +215,10 @@ async def load_initial_memories(mem0, user_name: str = "abivarman", count: int =
                 {"memory": r["memory"], "updated_at": r.get("updated_at", "")}
                 for r in results
             ]
+
+            # Update cache
+            _save_cache({"user_name": user_name, "memories": memories, "dirty": False})
+
             logging.info(f"Loaded {len(memories)} memories at startup")
             return results, json.dumps(memories)
 
@@ -208,7 +243,7 @@ def create_memory_context(results, user_name: str = "abivarman", has_mem0: bool 
         if has_mem0:
             memory_context += " Use search_memories() or get_recent_memories() tools to retrieve additional context when needed."
 
-        initial_ctx.add_message(role="assistant", content=memory_context)
+        initial_ctx.add_message(role="system", content=memory_context)
 
     return initial_ctx
 
@@ -248,6 +283,12 @@ async def save_conversation_to_mem0(
         try:
             await mem0.add(messages_formatted, user_id=user_name)
             logging.info(f"✓ Chat context saved ({len(messages_formatted)} messages)")
+
+            # Mark cache as dirty since we added new memories
+            cache = _load_cache() or {}
+            cache["dirty"] = True
+            _save_cache(cache)
+
         except Exception as e:
             logging.error(f"Failed to save conversation: {e}")
     else:

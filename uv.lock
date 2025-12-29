@@ -114,7 +114,7 @@ requires-dist = [
     { name = "psutil", specifier = ">=6.1.0" },
     { name = "pvporcupine", specifier = ">=4.0.0" },
     { name = "pyserial", specifier = ">=3.5" },
-    { name = "python-chess", specifier = ">=1.999" },
+    { name = "python-chess", specifier = ">=1.9.4" },
     { name = "python-dotenv" },
     { name = "requests" },
     { name = "send2trash", specifier = ">=1.8.3" },

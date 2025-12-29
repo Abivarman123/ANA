@@ -2,6 +2,9 @@
 
 from typing import Callable, List
 
+# Application launcher tools
+from .apps import close_application, list_applications, open_application
+
 # Chess skill module
 from .chess.skill import analyze_chess_position, get_active_chess_games, get_chess_move
 from .countdown import countdown
@@ -13,6 +16,14 @@ from .file_manager import (
     edit_file,
     list_files,
     read_file,
+)
+
+# File search tools (rg, fd)
+from .file_search import (
+    check_search_tools,
+    find_files,
+    search_everywhere,
+    search_file_contents,
 )
 from .hardware import (
     close_door,
@@ -68,6 +79,15 @@ class ToolRegistry:
             search_memories,
             get_recent_memories,
             countdown,
+            # Application launcher tools
+            open_application,
+            list_applications,
+            close_application,
+            # File search tools (rg, fd)
+            search_file_contents,
+            find_files,
+            search_everywhere,
+            check_search_tools,
             # Chess skills
             analyze_chess_position,
             get_chess_move,
@@ -134,6 +154,15 @@ __all__ = [
     "search_memories",
     "get_recent_memories",
     "countdown",
+    # Application launcher tools
+    "open_application",
+    "list_applications",
+    "close_application",
+    # File search tools (rg, fd)
+    "search_file_contents",
+    "find_files",
+    "search_everywhere",
+    "check_search_tools",
     # Chess skills
     "analyze_chess_position",
     "get_chess_move",

@@ -10,6 +10,7 @@ from livekit.plugins import google, noise_cancellation
 
 from .config import config
 from .prompts import CONTEXT_TEMPLATE, NUEROSAMA_MODE, SESSION_INSTRUCTION
+from .tools import get_tools
 from .tools.memory import (
     create_memory_context,
     initialize_mem0_client,
@@ -39,7 +40,7 @@ class Assistant(Agent):
                 session_resumption=types.SessionResumptionConfig(handle=None),
                 realtime_input_config=realtime_input_cfg,
             ),
-            tools=[],
+            tools=get_tools(),
             chat_ctx=chat_ctx,
         )
 

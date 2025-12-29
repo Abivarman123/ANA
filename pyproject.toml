@@ -35,5 +35,5 @@ dependencies = [
   "blingfire>=0.1.8",
   "opentelemetry-sdk>=1.21.0",
   "opentelemetry-exporter-otlp>=1.21.0",
-  "python-chess>=1.999",
+  "python-chess>=1.9.4",
 ]

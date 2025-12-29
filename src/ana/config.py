@@ -23,8 +23,13 @@ class Config:
             raise FileNotFoundError(f"Config file not found: {config_file}")
 
         # Load JSON config (use faster json loading)
-        with open(config_file, "r", encoding="utf-8") as f:
-            self._config: dict[str, Any] = json.load(f)
+        try:
+            with open(config_file, "r", encoding="utf-8") as f:
+                self._config: dict[str, Any] = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            # Fallback to empty config or raise a more descriptive error
+            print(f"Error loading config.json: {e}")
+            self._config = {}
 
         # Override sensitive credentials from environment (lazy load)
         self._email_loaded = False

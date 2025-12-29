@@ -146,8 +146,6 @@ def _find_app(app_name: str) -> Optional[dict]:
 
     # Search through aliases
     for name, config in APP_REGISTRY.items():
-        if normalized == name:
-            return config
         for alias in config.get("aliases", []):
             if normalized == _normalize_app_name(alias):
                 return config
@@ -191,6 +189,8 @@ async def open_application(
     if app_config:
         # Check if it's a shell execute command (like ms-settings:)
         if app_config.get("shell_execute"):
+            if sys.platform != "win32":
+                return "This feature is only available on Windows."
             target = app_config["paths"][0]
             os.startfile(target)
             logger.info(f"✓ Opened {app_name} via shell")
@@ -205,12 +205,11 @@ async def open_application(
                 cmd = [app_config["command"]]
                 if path:
                     cmd.append(path)
-                subprocess.Popen(cmd, shell=True)
+                subprocess.Popen(cmd, shell=False)
                 logger.info(f"✓ Opened {app_name} via command: {app_config['command']}")
                 return f"✓ Opened {app_name}" + (f" with {path}" if path else "")
             except Exception as e:
                 logger.warning(f"Command fallback failed: {e}")
-
         if exe_path:
             try:
                 cmd = [exe_path]
@@ -237,13 +236,11 @@ async def open_application(
         cmd = [app_name]
         if path:
             cmd.append(path)
-        subprocess.Popen(cmd, shell=True)
+        subprocess.Popen(cmd, shell=False)
         logger.info(f"✓ Opened {app_name} as direct command")
         return f"✓ Opened {app_name}" + (f" with {path}" if path else "")
     except Exception as e:
         logger.warning(f"Direct command failed: {e}")
-
-    return f"Unknown application: {app_name}. Please specify a valid application name."
 
 
 @function_tool()
@@ -268,26 +265,44 @@ async def list_applications(
             "control_panel",
         ],
         "Microsoft Office": ["word", "excel", "powerpoint"],
-        "Communication": ["discord", "slack", "teams"],
-        "Media": ["spotify", "vlc"],
-        "Gaming": ["steam"],
-        "Development": ["git_bash", "docker", "postman"],
+        "Communication": ["discord"],
+        "Media": ["vlc"],
         "Utilities": ["calculator", "paint", "snipping_tool"],
     }
 
-    result = "📱 Available Applications:\n\n"
+    result = "Available applications:\n\n"
+    seen_apps = set()
+
     for category, apps in categories.items():
         available = []
-        for app in apps:
-            if app in APP_REGISTRY:
-                exe_path = _find_executable(APP_REGISTRY[app]["paths"])
-                status = "✓" if exe_path else "?"
-                available.append(f"{status} {app}")
+        for app_name in apps:
+            seen_apps.add(app_name)
+            app_config = _find_app(app_name)
+            if app_config:
+                exe_path = _find_executable(app_config["paths"])
+                status = "✓" if exe_path or app_config.get("shell_execute") else "?"
+                available.append(f"{status} {app_name}")
+            else:
+                # App name from categories not in registry, still show it as ?
+                available.append(f"? {app_name}")
+
         if available:
             result += f"**{category}:**\n"
             result += "  " + ", ".join(available) + "\n\n"
 
-    result += "✓ = Installed, ? = May not be installed\n"
+    # Add any apps in registry that weren't in categories
+    other_apps = []
+    for app in APP_REGISTRY:
+        if app not in seen_apps:
+            exe_path = _find_executable(APP_REGISTRY[app]["paths"])
+            status = "✓" if exe_path or APP_REGISTRY[app].get("shell_execute") else "?"
+            other_apps.append(f"{status} {app}")
+
+    if other_apps:
+        result += "**Other:**\n"
+        result += "  " + ", ".join(other_apps) + "\n\n"
+
+    result += "✓ = Installed/Available, ? = May not be installed\n"
     result += "\nUse: open_application(app_name='chrome') to open an app"
 
     return result

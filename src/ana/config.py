@@ -1,6 +1,7 @@
 """Configuration management for ANA."""
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,9 @@ from typing import Any
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -28,7 +32,7 @@ class Config:
                 self._config: dict[str, Any] = json.load(f)
         except (json.JSONDecodeError, OSError) as e:
             # Fallback to empty config or raise a more descriptive error
-            print(f"Error loading config.json: {e}")
+            logger.error(f"Error loading config.json: {e}")
             self._config = {}
 
         # Override sensitive credentials from environment (lazy load)

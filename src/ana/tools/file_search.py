@@ -121,8 +121,6 @@ async def search_file_contents(
         "rg",
         "--line-number",
         "--with-filename",
-        "--max-count",
-        str(max_results),
         "--max-filesize",
         MAX_SEARCH_SIZE,
         "--color",

@@ -30,9 +30,9 @@ export const SessionProvider = ({ appConfig, children }: SessionProviderProps) =
   );
 
   return (
-    <RoomContext.Provider value={room}>
-      <SessionContext.Provider value={contextValue}>{children}</SessionContext.Provider>
-    </RoomContext.Provider>
+    <RoomContext value={room}>
+      <SessionContext value={contextValue}>{children}</SessionContext>
+    </RoomContext>
   );
 };
 

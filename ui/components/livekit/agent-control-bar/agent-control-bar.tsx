@@ -11,7 +11,8 @@ import { Button } from '@/components/livekit/button';
 import { Toggle } from '@/components/livekit/toggle';
 import { cn } from '@/lib/utils';
 import { ChatInput } from './chat-input';
-import { UseInputControlsProps, useInputControls } from './hooks/use-input-controls';
+import type { UseInputControlsProps } from './hooks/use-input-controls';
+import { useInputControls } from './hooks/use-input-controls';
 import { usePublishPermissions } from './hooks/use-publish-permissions';
 import { TrackSelector } from './track-selector';
 

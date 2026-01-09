@@ -1,18 +1,16 @@
 'use client';
 
-import { forwardRef, useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { useAutoScroll } from '@/components/livekit/scroll-area/hooks/useAutoScroll';
 import { cn } from '@/lib/utils';
 
 interface ScrollAreaProps {
   children?: React.ReactNode;
   className?: string;
+  ref?: React.Ref<HTMLDivElement>;
 }
 
-export const ScrollArea = forwardRef<HTMLDivElement, ScrollAreaProps>(function ScrollArea(
-  { className, children },
-  ref
-) {
+export function ScrollArea({ className, children, ref }: ScrollAreaProps) {
   const scrollContentRef = useRef<HTMLDivElement>(null);
 
   useAutoScroll(scrollContentRef.current);
@@ -35,4 +33,4 @@ export const ScrollArea = forwardRef<HTMLDivElement, ScrollAreaProps>(function S
       <div>{children}</div>
     </div>
   );
-});
+}

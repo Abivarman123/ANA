@@ -47,10 +47,6 @@ class Assistant(Agent):
             chat_ctx=chat_ctx,
         )
 
-    async def on_user_message(self, message: str):
-        """Handle incoming text messages."""
-        pass
-
 
 @server.rtc_session()
 async def entrypoint(ctx: agents.JobContext):

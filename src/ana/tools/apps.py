@@ -161,8 +161,8 @@ def _find_executable(paths: list[str]) -> Optional[str]:
         if os.path.exists(expanded):
             return expanded
         # Check PATH for bare executables (e.g. "notepad.exe", "calc.exe")
-        if shutil.which(expanded):
-            return shutil.which(expanded)
+        if resolved := shutil.which(expanded):
+            return resolved
     return None
 
 

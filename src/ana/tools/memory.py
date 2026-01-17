@@ -71,7 +71,7 @@ def _save_cache(data: Dict[str, Any]) -> None:
 
 def _format_memory_entry(result: Dict[str, Any], idx: int) -> str:
     """Format a single memory result."""
-    memory_text = result.get("memory", "")
+    memory_text = result.get("memory", result.get("text", ""))
     entry_parts = [f"{idx}. {memory_text}"]
 
     if categories := result.get("categories"):
@@ -82,6 +82,17 @@ def _format_memory_entry(result: Dict[str, Any], idx: int) -> str:
         entry_parts.append(f"(Updated: {updated[:10]})")
 
     return " ".join(entry_parts)
+
+
+def _simplify_memories(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Simplify memory objects for context window and caching."""
+    return [
+        {
+            "memory": r.get("memory", r.get("text", "")),
+            "updated_at": r.get("updated_at", ""),
+        }
+        for r in results
+    ]
 
 
 def _format_memory_results(results: List[Dict[str, Any]]) -> str:
@@ -207,10 +218,7 @@ async def load_initial_memories(
 
         if results:
             # Simplify memory objects for caching
-            memories = [
-                {"memory": r["memory"], "updated_at": r.get("updated_at", "")}
-                for r in results
-            ]
+            memories = _simplify_memories(results)
 
             # Update cache
             _save_cache({"user_name": user_name, "memories": memories, "dirty": False})
@@ -257,10 +265,7 @@ def create_memory_context(
 
     if results:
         # Simplify for context window
-        memories = [
-            {"memory": r["memory"], "updated_at": r.get("updated_at", "")}
-            for r in results
-        ]
+        memories = _simplify_memories(results)
 
         context_msg = (
             f"The user's name is {user_name}. "

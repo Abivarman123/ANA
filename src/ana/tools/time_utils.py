@@ -1,5 +1,6 @@
 """Date and time tools."""
 
+import asyncio
 import logging
 from datetime import datetime
 
@@ -32,4 +33,4 @@ async def get_current_time(
 
 
 if __name__ == "__main__":
-    print(get_current_time())
+    print(asyncio.run(get_current_time(None)))

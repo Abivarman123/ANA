@@ -1,6 +1,7 @@
 """Main agent implementation for ANA using AgentServer pattern."""
 
 import datetime
+import logging
 import platform
 
 from google.genai import types
@@ -9,13 +10,16 @@ from livekit.agents import Agent, AgentServer, AgentSession, room_io
 from livekit.plugins import google, noise_cancellation
 
 from .config import config
-from .prompts import CONTEXT_TEMPLATE, NUEROSAMA_MODE, SESSION_INSTRUCTION
+from .prompts import CONTEXT_TEMPLATE, NEUROSAMA_MODE, SESSION_INSTRUCTION
 from .tools import get_tools
 from .tools.memory import (
     save_conversation_to_mem0,
     setup_memory_system,
 )
 from .tools.system import close_terminal_window
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class Assistant(Agent):
@@ -46,7 +50,7 @@ async def entrypoint(ctx: agents.JobContext):
         user_name=user_name,
         os_name=platform.system(),
     )
-    full_instructions = f"{dynamic_context}\n{NUEROSAMA_MODE}"
+    full_instructions = f"{dynamic_context}\n{NEUROSAMA_MODE}"
 
     session = AgentSession(
         llm=google.realtime.RealtimeModel(
@@ -67,7 +71,10 @@ async def entrypoint(ctx: agents.JobContext):
 
     # Register shutdown callbacks
     async def save_memory_callback():
-        await save_conversation_to_mem0(session, mem0, user_name, memory_str)
+        try:
+            await save_conversation_to_mem0(session, mem0, user_name, memory_str)
+        except Exception as e:
+            logger.error(f"Error in save_memory_callback: {e}")
 
     ctx.add_shutdown_callback(save_memory_callback)
     ctx.add_shutdown_callback(close_terminal_window)

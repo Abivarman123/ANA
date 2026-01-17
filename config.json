@@ -29,12 +29,12 @@
     "server_host": "localhost",
     "server_port": 8765,
     "default_difficulty": "medium",
-    "thinking_delay_min": 2.0,
+    "thinking_delay_min": 1.0,
     "thinking_delay_max": 5.0
   },
   "session": {
     "compression": {
-      "trigger_tokens": 8000
+      "trigger_tokens": 16000
     }
   }
 }

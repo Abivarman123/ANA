@@ -1,7 +1,8 @@
 import asyncio
+
 from livekit import agents
 
-from src.ana.agent import entrypoint
+from src.ana.agent import server
 
 if __name__ == "__main__":
     try:
@@ -9,4 +10,4 @@ if __name__ == "__main__":
     except RuntimeError:
         asyncio.set_event_loop(asyncio.new_event_loop())
 
-    agents.cli.run_app(agents.WorkerOptions(entrypoint_fnc=entrypoint))
+    agents.cli.run_app(server)

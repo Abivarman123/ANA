@@ -5,6 +5,7 @@ This module provides tools to open various applications on Windows.
 
 import logging
 import os
+import shutil
 import subprocess
 import sys
 from typing import Optional
@@ -159,6 +160,9 @@ def _find_executable(paths: list[str]) -> Optional[str]:
         expanded = os.path.expandvars(path)
         if os.path.exists(expanded):
             return expanded
+        # Check PATH for bare executables (e.g. "notepad.exe", "calc.exe")
+        if shutil.which(expanded):
+            return shutil.which(expanded)
     return None
 
 

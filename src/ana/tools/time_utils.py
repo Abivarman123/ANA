@@ -23,10 +23,13 @@ async def get_current_date(
 @handle_tool_error("get_current_time")
 async def get_current_time(
     context: RunContext,  # type: ignore
-    include_seconds: bool = True,
 ) -> str:
-    """Get the current local time in 24-hour format. Optionally include seconds."""
-    fmt = "%H:%M:%S" if include_seconds else "%H:%M"
+    """Get the current local time in 24-hour format."""
+    fmt = "%H:%M"
     value = datetime.now().strftime(fmt)
     logging.info(f"Current time: {value}")
     return value
+
+
+if __name__ == "__main__":
+    print(get_current_time())

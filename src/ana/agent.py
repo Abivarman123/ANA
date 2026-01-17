@@ -4,7 +4,7 @@ import datetime
 import platform
 
 from google.genai import types
-from livekit import agents, rtc
+from livekit import agents
 from livekit.agents import Agent, AgentServer, AgentSession, room_io
 from livekit.plugins import google, noise_cancellation
 
@@ -12,66 +12,33 @@ from .config import config
 from .prompts import CONTEXT_TEMPLATE, NUEROSAMA_MODE, SESSION_INSTRUCTION
 from .tools import get_tools
 from .tools.memory import (
-    create_memory_context,
-    initialize_mem0_client,
-    load_initial_memories,
     save_conversation_to_mem0,
+    setup_memory_system,
 )
 from .tools.system import close_terminal_window
-
-# Initialize Server
-server = AgentServer()
 
 
 class Assistant(Agent):
     """ANA Assistant agent."""
 
     def __init__(self, instructions: str, chat_ctx=None) -> None:
-        realtime_input_cfg = types.RealtimeInputConfig(
-            automatic_activity_detection=types.AutomaticActivityDetection(),
-        )
         super().__init__(
             instructions=instructions,
-            llm=google.beta.realtime.RealtimeModel(
-                model=config.model["model_name"],
-                voice=config.model["voice"],
-                temperature=config.model["temperature"],
-                context_window_compression=types.ContextWindowCompressionConfig(
-                    sliding_window=types.SlidingWindow(),
-                    trigger_tokens=16000,
-                ),
-                session_resumption=types.SessionResumptionConfig(handle=None),
-                realtime_input_config=realtime_input_cfg,
-            ),
-            tools=get_tools(),
             chat_ctx=chat_ctx,
         )
+
+
+# Initialize Server
+server = AgentServer()
 
 
 @server.rtc_session()
 async def entrypoint(ctx: agents.JobContext):
     """Main entrypoint for the agent."""
-    await ctx.connect()
-
-    session = AgentSession()
     user_name = config.get("user_name")
 
-    # Initialize Mem0 client
-    try:
-        mem0 = await initialize_mem0_client()
-        results, memory_str = await load_initial_memories(mem0, user_name, count=10)
-        initial_ctx = create_memory_context(results, user_name, has_mem0=True)
-    except Exception:
-        mem0 = None
-        results, memory_str = [], ""
-        initial_ctx = create_memory_context([], user_name, has_mem0=False)
-
-    # Register shutdown callbacks
-    async def save_memory_callback():
-        await save_conversation_to_mem0(session, mem0, user_name, memory_str)
-
-    ctx.add_shutdown_callback(save_memory_callback)
-    ctx.add_shutdown_callback(close_terminal_window)
+    # Initialize Memory System
+    mem0, initial_ctx, memory_str = await setup_memory_system(user_name)
 
     # Prepare dynamic system instructions
     dynamic_context = CONTEXT_TEMPLATE.format(
@@ -81,6 +48,30 @@ async def entrypoint(ctx: agents.JobContext):
     )
     full_instructions = f"{dynamic_context}\n{NUEROSAMA_MODE}"
 
+    session = AgentSession(
+        llm=google.realtime.RealtimeModel(
+            model=config.model["model_name"],
+            voice=config.model["voice"],
+            temperature=config.model["temperature"],
+            thinking_config=types.ThinkingConfig(
+                include_thoughts=False,
+            ),
+            context_window_compression=types.ContextWindowCompressionConfig(
+                sliding_window=types.SlidingWindow(),
+                trigger_tokens=16000,
+            ),
+            session_resumption=types.SessionResumptionConfig(handle=None),
+        ),
+        tools=get_tools(),
+    )
+
+    # Register shutdown callbacks
+    async def save_memory_callback():
+        await save_conversation_to_mem0(session, mem0, user_name, memory_str)
+
+    ctx.add_shutdown_callback(save_memory_callback)
+    ctx.add_shutdown_callback(close_terminal_window)
+
     assistant = Assistant(instructions=full_instructions, chat_ctx=initial_ctx)
 
     await session.start(
@@ -88,9 +79,7 @@ async def entrypoint(ctx: agents.JobContext):
         agent=assistant,
         room_options=room_io.RoomOptions(
             audio_input=room_io.AudioInputOptions(
-                noise_cancellation=lambda params: noise_cancellation.BVCTelephony()
-                if params.participant.kind == rtc.ParticipantKind.PARTICIPANT_KIND_SIP
-                else noise_cancellation.BVC(),
+                noise_cancellation=noise_cancellation.BVC(),
             ),
         ),
     )

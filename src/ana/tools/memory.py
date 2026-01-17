@@ -3,10 +3,17 @@
 import json
 import logging
 import os
+from typing import Any, Dict, List, Optional, Tuple
 
 from livekit.agents import AgentSession, ChatContext, function_tool
 from mem0 import AsyncMemoryClient
 
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# Constants
+CACHE_FILE = ".memory_cache.json"
+DEFAULT_USER = "abivarman"
 MEMORY_FILTER_PROMPT = """Extract ONLY long-term, meaningful information. Be highly selective.
 
 EXTRACT:
@@ -32,161 +39,149 @@ RULES:
 - Respect "don't remember this" requests
 """
 
-CACHE_FILE = ".memory_cache.json"
+
+def _get_mem0_client() -> Optional[AsyncMemoryClient]:
+    """Get Mem0 client instance if API key is configured."""
+    api_key = os.getenv("MEM0_API_KEY")
+    if not api_key:
+        return None
+    return AsyncMemoryClient(api_key=api_key)
 
 
-def _load_cache():
-    if os.path.exists(CACHE_FILE):
-        try:
-            with open(CACHE_FILE, "r") as f:
-                return json.load(f)
-        except Exception as e:
-            logging.warning(f"Failed to load memory cache: {e}")
-    return None
-
-
-def _save_cache(data):
+def _load_cache() -> Optional[Dict[str, Any]]:
+    """Load memory cache from file."""
+    if not os.path.exists(CACHE_FILE):
+        return None
     try:
-        with open(CACHE_FILE, "w") as f:
+        with open(CACHE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning(f"Failed to load memory cache: {e}")
+        return None
+
+
+def _save_cache(data: Dict[str, Any]) -> None:
+    """Save memory data to cache file."""
+    try:
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
     except Exception as e:
-        logging.warning(f"Failed to save memory cache: {e}")
+        logger.warning(f"Failed to save memory cache: {e}")
 
 
-def get_mem0_client():
-    """Get or create mem0 client instance."""
-    mem0_api_key = os.getenv("MEM0_API_KEY")
-    return AsyncMemoryClient(api_key=mem0_api_key) if mem0_api_key else None
+def _format_memory_entry(result: Dict[str, Any], idx: int) -> str:
+    """Format a single memory result."""
+    memory_text = result.get("memory", "")
+    entry_parts = [f"{idx}. {memory_text}"]
+
+    if categories := result.get("categories"):
+        entry_parts.append(f"[Categories: {', '.join(categories)}]")
+
+    if updated := result.get("updated_at"):
+        # Keep only the date part YYYY-MM-DD
+        entry_parts.append(f"(Updated: {updated[:10]})")
+
+    return " ".join(entry_parts)
 
 
-async def verify_custom_instructions(mem0) -> bool:
-    """Verify that custom instructions are properly set."""
-    if not mem0:
-        return False
-
-    try:
-        project_info = await mem0.project.get(fields=["custom_instructions"])
-        current_instructions = (
-            project_info.get("custom_instructions", "") if project_info else ""
-        )
-
-        if not current_instructions:
-            logging.warning("⚠ Custom instructions are empty")
-            return False
-
-        key_phrases = ["STRICT EXCLUSIONS", "DO NOT STORE", "routine commands"]
-        if sum(1 for p in key_phrases if p in current_instructions) >= 2:
-            logging.info(
-                f"✓ Custom instructions verified ({len(current_instructions)} chars)"
-            )
-            return True
-
-        logging.warning("⚠ Custom instructions may be outdated")
-        return False
-    except Exception as e:
-        logging.error(f"Failed to verify custom instructions: {e}")
-        return False
-
-
-def format_memory_results(results):
-    """Format memory results into readable strings."""
-    memories = []
-    for idx, result in enumerate(results, 1):
-        entry = f"{idx}. {result.get('memory', '')}"
-        if cats := result.get("categories"):
-            entry += f" [Categories: {', '.join(cats)}]"
-        if updated := result.get("updated_at"):
-            entry += f" (Updated: {updated[:10]})"
-        memories.append(entry)
-    return memories
+def _format_memory_results(results: List[Dict[str, Any]]) -> str:
+    """Format a list of memory results into a readable string."""
+    if not results:
+        return ""
+    return "\n".join(_format_memory_entry(r, i) for i, r in enumerate(results, 1))
 
 
 @function_tool()
 async def search_memories(query: str, limit: int = 5) -> str:
     """Search for relevant memories from past conversations."""
-    logging.info(f"Searching memories: {query}, limit: {limit}")
+    logger.info(f"Searching memories: '{query}' (limit: {limit})")
 
-    mem0 = get_mem0_client()
-    if not mem0:
+    client = _get_mem0_client()
+    if not client:
         return "Memory system is not available. MEM0_API_KEY not configured."
 
     try:
-        results = await mem0.search(
-            query=query, filters={"user_id": "abivarman"}, limit=min(limit, 20)
+        # Cap limit to reasonable size
+        search_limit = min(limit, 20)
+        response = await client.search(
+            query=query, filters={"user_id": DEFAULT_USER}, limit=search_limit
         )
 
-        if not results or not results.get("results"):
+        results = response.get("results", []) if response else []
+
+        if not results:
             return f"No relevant memories found for query: {query}"
 
-        memories = format_memory_results(results["results"])
-        logging.info(f"Retrieved {len(memories)} memories")
-        return f"Found {len(memories)} relevant memories:\n\n" + "\n".join(memories)
+        formatted_memories = _format_memory_results(results)
+        logger.info(f"Found {len(results)} relevant memories")
+        return f"Found {len(results)} relevant memories:\n\n{formatted_memories}"
+
     except Exception as e:
-        logging.error(f"Error searching memories: {e}")
+        logger.error(f"Error searching memories: {e}")
         return f"Failed to search memories: {str(e)}"
 
 
 @function_tool()
 async def get_recent_memories(count: int = 10) -> str:
     """Retrieve the most recent memories about the user."""
-    logging.info(f"Retrieving {count} recent memories")
+    logger.info(f"Retrieving {count} recent memories")
 
-    mem0 = get_mem0_client()
-    if not mem0:
+    client = _get_mem0_client()
+    if not client:
         return "Memory system is not available. MEM0_API_KEY not configured."
 
     try:
-        results = await mem0.get_all(
-            filters={"user_id": "abivarman"}, page=1, page_size=min(count, 20)
-        )
-        memory_list = (
-            results.get("results", [])
-            if isinstance(results, dict)
-            else (results if isinstance(results, list) else [])
+        page_size = min(count, 20)
+        response = await client.get_all(
+            filters={"user_id": DEFAULT_USER}, page=1, page_size=page_size
         )
 
-        if not memory_list:
+        # Handle simplified response handling (dict or list)
+        results = (
+            response.get("results", [])
+            if isinstance(response, dict)
+            else (response if isinstance(response, list) else [])
+        )
+
+        if not results:
             return "No recent memories found."
 
-        memories = format_memory_results(memory_list)
-        logging.info(f"Retrieved {len(memories)} recent memories")
-        return f"Retrieved {len(memories)} recent memories:\n\n" + "\n".join(memories)
+        formatted_memories = _format_memory_results(results)
+        logger.info(f"Retrieved {len(results)} recent memories")
+        return f"Retrieved {len(results)} recent memories:\n\n{formatted_memories}"
+
     except Exception as e:
-        logging.error(f"Error retrieving recent memories: {e}")
+        logger.error(f"Error retrieving recent memories: {e}")
         return f"Failed to retrieve recent memories: {str(e)}"
 
 
-async def initialize_mem0_client():
-    """Initialize Mem0 client with custom instructions."""
-    mem0_api_key = os.getenv("MEM0_API_KEY")
-    if not mem0_api_key:
-        logging.warning("MEM0_API_KEY not found. Memory features disabled.")
+async def initialize_mem0_client() -> Optional[AsyncMemoryClient]:
+    """Initialize Mem0 client and update custom instructions."""
+    client = _get_mem0_client()
+    if not client:
+        logger.warning("MEM0_API_KEY not found. Memory features disabled.")
         return None
 
-    logging.info("Initializing Mem0 client...")
-    mem0 = AsyncMemoryClient(api_key=mem0_api_key)
-
+    logger.info("Initializing Mem0 client and updating instructions...")
     try:
-        await mem0.project.update(custom_instructions=MEMORY_FILTER_PROMPT)
-        logging.info("✓ Custom instructions updated")
-
-        if not await verify_custom_instructions(mem0):
-            logging.warning("⚠ Custom instructions verification failed")
+        # Always update instructions to ensure they are current
+        await client.project.update(custom_instructions=MEMORY_FILTER_PROMPT)
+        logger.info("✓ Custom instructions updated successfully")
     except Exception as e:
-        logging.error(f"Failed to set custom instructions: {e}")
+        logger.error(f"Failed to update custom instructions: {e}")
+        # Continue even if instruction update fails, as the client might still work
 
-    logging.info(
-        "Mem0 client initialized. Note: Instructions only apply to NEW memories"
-    )
-    return mem0
+    return client
 
 
-async def load_initial_memories(mem0, user_name: str = "abivarman", count: int = 10):
-    """Load initial memories at startup."""
-    if not mem0:
+async def load_initial_memories(
+    client: Optional[AsyncMemoryClient], user_name: str = DEFAULT_USER, count: int = 10
+) -> Tuple[List[Dict[str, Any]], str]:
+    """Load initial memories at startup, using cache if available."""
+    if not client:
         return [], ""
 
-    # Try to load from cache first
+    # Check cache first
     cache = _load_cache()
     if (
         cache
@@ -194,13 +189,13 @@ async def load_initial_memories(mem0, user_name: str = "abivarman", count: int =
         and cache.get("user_name") == user_name
         and cache.get("memories")
     ):
-        logging.info("Using cached memories")
+        logger.info("Using cached memories")
         memories = cache["memories"]
         return memories, json.dumps(memories)
 
     try:
-        logging.info(f"Retrieving recent memories for: {user_name}")
-        response = await mem0.get_all(
+        logger.info(f"Fetching recent memories for: {user_name}")
+        response = await client.get_all(
             filters={"user_id": user_name}, page=1, page_size=count
         )
 
@@ -211,6 +206,7 @@ async def load_initial_memories(mem0, user_name: str = "abivarman", count: int =
         )
 
         if results:
+            # Simplify memory objects for caching
             memories = [
                 {"memory": r["memory"], "updated_at": r.get("updated_at", "")}
                 for r in results
@@ -219,77 +215,119 @@ async def load_initial_memories(mem0, user_name: str = "abivarman", count: int =
             # Update cache
             _save_cache({"user_name": user_name, "memories": memories, "dirty": False})
 
-            logging.info(f"Loaded {len(memories)} memories at startup")
+            logger.info(f"Loaded {len(memories)} memories from API")
             return results, json.dumps(memories)
 
-        logging.info("No existing memories found")
+        logger.info("No existing memories found via API")
         return [], ""
+
     except Exception as e:
-        logging.error(f"Failed to retrieve memories: {e}")
+        logger.error(f"Failed to retrieve memories: {e}")
         return [], ""
 
 
-def create_memory_context(results, user_name: str = "abivarman", has_mem0: bool = True):
+async def setup_memory_system(
+    user_name: str = DEFAULT_USER,
+) -> Tuple[Optional[AsyncMemoryClient], ChatContext, str]:
+    """
+    Initialize the memory system, load initial memories, and create the starting context.
+
+    Returns:
+        Tuple containing:
+        - mem0_client: The initialized client or None
+        - initial_ctx: The chat context with memories loaded
+        - memory_str: The string representation of memories (for filtering out of history)
+    """
+    client = await initialize_mem0_client()
+
+    if client:
+        results, memory_str = await load_initial_memories(client, user_name)
+        ctx = create_memory_context(results, user_name, has_mem0=True)
+        return client, ctx, memory_str
+
+    # Fallback if no client or initialization failed
+    return None, create_memory_context([], user_name, has_mem0=False), ""
+
+
+def create_memory_context(
+    results: List[Dict[str, Any]], user_name: str = DEFAULT_USER, has_mem0: bool = True
+) -> ChatContext:
     """Create initial chat context with loaded memories."""
     initial_ctx = ChatContext()
 
     if results:
+        # Simplify for context window
         memories = [
             {"memory": r["memory"], "updated_at": r.get("updated_at", "")}
             for r in results
         ]
-        memory_context = f"The user's name is {user_name}. Here are the {len(memories)} most recent memories: {json.dumps(memories)}."
+
+        context_msg = (
+            f"The user's name is {user_name}. "
+            f"Here are the {len(memories)} most recent memories: {json.dumps(memories)}."
+        )
 
         if has_mem0:
-            memory_context += " Use search_memories() or get_recent_memories() tools to retrieve additional context when needed."
+            context_msg += " Use search_memories() or get_recent_memories() tools to retrieve additional context when needed."
 
-        initial_ctx.add_message(role="system", content=memory_context)
+        initial_ctx.add_message(role="system", content=context_msg)
 
     return initial_ctx
 
 
 async def save_conversation_to_mem0(
-    session: AgentSession, mem0, user_name: str = "abivarman", memory_str: str = ""
-):
+    session: AgentSession,
+    client: Optional[AsyncMemoryClient],
+    user_name: str = DEFAULT_USER,
+    initial_memory_str: str = "",
+) -> None:
     """Save conversation context to Mem0 on shutdown."""
-    logging.info("=== Shutdown callback triggered ===")
+    logger.info("=== Memory Shutdown Handler ===")
 
-    if not mem0:
-        logging.info("Mem0 client not available, skipping memory save")
+    if not client:
+        logger.info("Mem0 client not available, skipping save")
         return
 
     if not session.history:
-        logging.warning("No conversation history to save")
+        logger.warning("No conversation history to save")
         return
 
-    messages_formatted = []
+    # Extract valid messages
+    messages_to_save = []
+
     for item in session.history.items:
+        if item.role not in ["user", "assistant"]:
+            continue
+
         content_str = (
             "".join(item.content)
             if isinstance(item.content, list)
             else str(item.content)
-        )
+        ).strip()
 
-        if (memory_str and memory_str in content_str) or not content_str.strip():
+        # filters
+        if not content_str:
             continue
 
-        if item.role in ["user", "assistant"]:
-            messages_formatted.append(
-                {"role": item.role, "content": content_str.strip()}
-            )
+        # Avoid re-saving the initial memory context prompt if it appears in history
+        if initial_memory_str and initial_memory_str in content_str:
+            continue
 
-    if messages_formatted:
-        logging.info(f"Saving {len(messages_formatted)} messages to memory")
-        try:
-            await mem0.add(messages_formatted, user_id=user_name)
-            logging.info(f"✓ Chat context saved ({len(messages_formatted)} messages)")
+        messages_to_save.append({"role": item.role, "content": content_str})
 
-            # Mark cache as dirty since we added new memories
-            cache = _load_cache() or {}
-            cache["dirty"] = True
-            _save_cache(cache)
+    if not messages_to_save:
+        logger.info("No eligible messages to save")
+        return
 
-        except Exception as e:
-            logging.error(f"Failed to save conversation: {e}")
-    else:
-        logging.info("No messages to save to memory")
+    logger.info(f"Saving {len(messages_to_save)} messages to memory...")
+    try:
+        await client.add(messages_to_save, user_id=user_name)
+        logger.info("✓ Chat context saved successfully")
+
+        # Invalidate cache
+        cache = _load_cache() or {}
+        cache["dirty"] = True
+        _save_cache(cache)
+
+    except Exception as e:
+        logger.error(f"Failed to save conversation: {e}")

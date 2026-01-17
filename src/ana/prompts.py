@@ -1,5 +1,3 @@
-"""Prompt templates for ANA."""
-
 CONTEXT_TEMPLATE = """
 # Current Context
 - **Date**: {date}

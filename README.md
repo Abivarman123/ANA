@@ -130,7 +130,7 @@ Customize ANA's behavior in `config.json`:
 
 3. **Wake Word Mode** (Optional):
    ```bash
-   python wake_word/wake_service.py
+   uv run wake_word/wake_service.py
    ```
 
 ## 🗣️ Interaction & Personality

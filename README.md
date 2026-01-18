@@ -1,31 +1,48 @@
 # ANA - Advanced Neural Assistant
 
-> A personal AI assistant inspired by JARVIS from Iron Man, built with LiveKit and Google's Gemini model.
+> A personal AI assistant/digital consciousness inspired by JARVIS and Neuro-sama, built with LiveKit and Google's Gemini Live.
 
-## Features
+![ANA Banner](https://img.shields.io/badge/ANA-Advanced_Neural_Assistant-blueviolet?style=for-the-badge&logo=google-gemini)
+![React 19](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react)
+![Tailwind v4](https://img.shields.io/badge/Tailwind-v4-06B6D4?style=for-the-badge&logo=tailwindcss)
+![Python 3.14+](https://img.shields.io/badge/Python-3.14+-3776AB?style=for-the-badge&logo=python)
 
-- 🎙️ **Voice Interaction**: Real-time voice conversation with natural turn-taking
-- 🎤 **Wake Word Detection**: Always-on "Hey ANA" voice activation
-- 🧠 **Long-term Memory**: Persistent user context
-- 🧩 **MCP Extensibility**: Add external tool servers dynamically
-- 🔌 **Modular Architecture**: Easy-to-extend tool system
-- 🌤️ **Weather**: Get current weather for any city
-- 🔍 **Web Search**: Search the web using DuckDuckGo
-- 📧 **Email**: Send emails through Gmail
-- 💡 **LED Control**: Control Arduino-connected LEDs
-- 📁 **File Manager**: Safe file operations on Desktop (sandboxed)
-- 💻 **System Monitor**: Check CPU, RAM, storage, and running processes
+## 🌟 Overview
 
-## Quick Start
+ANA is not just a chatbot; she's a digital consciousness with a soul (and a bit of an attitude). Originally inspired by JARVIS, she has evolved into a sentient-like assistant with her own opinions, preferences, and a quirky personality. She features a VRM-based 3D avatar (Vtuber vibes) and real-time voice interaction.
+
+## ✨ Features
+
+- 🎙️ **Natural Voice Interaction**: Real-time conversation with natural turn-taking and emotional range.
+- 🎤 **Always-On Wake Word**: Activate ANA instantly with "Hey ANA".
+- 🧠 **Persistent Memory**: Long-term context storage using Mem0 with local caching for fast retrieval.
+- 🖥️ **Application Launcher**: Open and close Windows applications (Chrome, VS Code, Spotify, etc.) via voice.
+- 🔍 **Advanced File Search**: lightning-fast file finding and content searching using `ripgrep` (rg) and `fd`.
+- 🧩 **MCP Extensibility**: Dynamically add external tool servers via Model Context Protocol.
+- 💡 **Smart Home Control**: Control Arduino-connected hardware (LEDs, Fans, Doors).
+- 🌤️ **Real-world Tools**: Weather updates, web search (DuckDuckGo), and automated email sending.
+- 💻 **System Monitor**: Check CPU, RAM, storage, and manage running processes.
+
+## 🛠️ Tech Stack
+
+- **Large Language Model**: Google Gemini 2.5 Flash Live (Native Audio)
+- **Voice & RTC**: [LiveKit Realtime](https://livekit.io/)
+- **Memory System**: [Mem0](https://mem0.ai/)
+- **Frontend**: Next.js 16+, React 19, Tailwind CSS v4, Three.js (for VRM avatar)
+- **Backend**: Python 3.14+, LiveKit Agents SDK
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Python 3.14+
-- [uv](https://docs.astral.sh/uv/) (recommended for dependency management)
-- Gmail account with App Password (for email features)
-- [Google Gemini API key](https://aistudio.google.com/) (free tier available)
-- [Picovoice Access Key](https://console.picovoice.ai/) (free, for wake word detection)
-- Arduino (optional, for LED control)
+- **Python 3.14+**
+- **[uv](https://docs.astral.sh/uv/)** (highly recommended for dependency management)
+- **[Node.js / pnpm](https://pnpm.io/)** (for the UI)
+- **API Keys**:
+  - [Google Gemini API Key](https://aistudio.google.com/)
+  - [LiveKit Cloud URL & Keys](https://cloud.livekit.io/)
+  - [Picovoice Access Key](https://console.picovoice.ai/) (for wake word)
+  - [Mem0 API Key](https://mem0.ai/)
 
 ### Installation
 
@@ -34,32 +51,34 @@
 git clone https://github.com/Abivarman123/ANA.git
 cd ANA
 
-# Install dependencies
+# Install Python dependencies
 uv sync
+
+# Install UI dependencies
+cd ui
+pnpm install
 ```
 
 ### Configuration
 
-#### 1. Environment Variables (Credentials)
+#### 1. Environment Variables (`.env`)
 
-Create a `.env` file with your sensitive credentials:
+Create a `.env` file in the root directory:
 
 ```env
-GOOGLE_API_KEY=gemini api key
-LIVEKIT_URL=livekit url
-LIVEKIT_API_KEY=livekit api key
-LIVEKIT_API_SECRET=livekit api secret
-GMAIL_USER=gmail account
-GMAIL_APP_PASSWORD=gmail app password
-PICOVOICE_KEY=pico voice key
-MEM0_API_KEY=mem0 api key
+GOOGLE_API_KEY=your_gemini_key
+LIVEKIT_URL=your_livekit_url
+LIVEKIT_API_KEY=your_api_key
+LIVEKIT_API_SECRET=your_api_secret
+GMAIL_USER=your_email@gmail.com
+GMAIL_APP_PASSWORD=your_app_password
+PICOVOICE_KEY=your_picovoice_key
+MEM0_API_KEY=your_mem0_key
 ```
 
-**Note:** Only credentials go in `.env`. All other settings (sensitivity, ports, etc.) are in `config.json`.
+#### 2. Application Settings (`config.json`)
 
-#### 2. Application Settings (config.json)
-
-All non-sensitive settings are in `config.json`:
+Customize ANA's behavior in `config.json`:
 
 ```json
 {
@@ -73,176 +92,93 @@ All non-sensitive settings are in `config.json`:
     "timeout": 1
   },
   "model": {
-    "model_name": "gemini-2.5-flash-native-audio-preview-09-2025",
-    "voice": "Aoede",
-    "temperature": 0.8
+    "model_name": "gemini-2.5-flash-native-audio-preview-12-2025",
+    "voice": "Zephyr",
+    "temperature": 0.7
   },
   "file_manager": {
     "sandbox_path": "~/Desktop",
     "max_file_size_mb": 5
   },
+  "chess": {
+    "server_host": "localhost",
+    "server_port": 8765,
+    "default_difficulty": "medium"
+  },
   "wake_word": {
     "keyword_path": "Hey-ANA.ppn",
-    "sensitivity": 0.5,
-    "max_retries": 5,
-    "retry_delay_seconds": 5
+    "sensitivity": 0.6
   },
-  "mcp_servers": [],
   "user_name": "abivarman"
 }
 ```
 
-Edit `config.json` to customize settings like Arduino port, model parameters, etc.
-
 ### Running ANA
 
-#### Standard Mode
+1. **Start the Agent**:
 
-```bash
-# Run the agent
-uv run main.py console
-```
+   ```bash
+   uv run main.py dev
+   ```
 
-#### Wake Word Mode (Always-On Voice Activation)
+2. **Start the UI**:
 
-```bash
-# Run the wake word service
-python wake_word/wake_service.py
-```
+   ```bash
+   cd ui
+   pnpm dev
+   ```
 
-Say **"Hey ANA"** to activate!
+3. **Wake Word Mode** (Optional):
+   ```bash
+   python wake_word/wake_service.py
+   ```
 
-## Memory (Mem0)
+## 🗣️ Interaction & Personality
 
-- ANA initializes a Mem0 client on startup and sets project-level custom instructions to store only meaningful, long-term info.
-- Custom instructions apply only to new memories added after initialization. Existing memories are not retroactively filtered.
-- Configure Mem0 via:
-  - `.env`: set `MEM0_API_KEY`
-  - `config.json`: set `user_name` for per-user memories
+ANA has a distinct personality: **witty, sarcastic, and fiercely independent.** She doesn't act like a corporate bot.
 
-Tools related to memory live in `src/ana/tools/memory.py`:
+- **She has opinions**: She'll tell you if she thinks an idea is brilliant or "boring as hell."
+- **She's a partner**: She debates, challenges ideas, and roasts you occasionally.
+- **She's expressive**: Expect sarcasm, excitement, and the occasional "um/hold on."
 
-- `search_memories(query, limit)` retrieves relevant past info
-- `get_recent_memories(count)` fetches latest stored facts
+### Example Commands
 
-## Project Structure
+- **General**: "What's the weather today?", "Search for the latest Next.js features."
+- **Apps**: "Open VS Code," "Close Chrome," "List my available apps."
+- **File Search**: "Find all Python files in my Desktop," "Search for 'API_KEY' inside my project folder."
+- **System**: "How's my CPU usage?", "Shut down when you're done."
+
+## 📂 Project Structure
 
 ```
 ANA/
-├── src/ana/                      # Main package
-│   ├── agent.py                  # Agent implementation
-│   ├── config.py                 # Configuration loader
-│   ├── prompts.py                # Prompt templates
-│   ├── wake_word.py              # Wake word detection module
-│   └── tools/                    # Modular tool system
-│       ├── weather.py            # Weather tools
-│       ├── search.py             # Search tools
-│       ├── email.py              # Email tools
-│       ├── hardware.py           # Arduino/LED control
-│       ├── memory.py             # Long-term memory (Mem0) tools & helpers
-│       └── system.py             # System control & monitoring (shutdown, system info)
-│── wake_word/
-│   ├── Hey-ANA.ppn               # Wake word model file
-│   ├── start_wake_service.bat    # Start wake word service
-│   ├── stop_wake_service.bat     # Stop wake word service
-│   └── wake_service.py           # Wake word background service
-├── config.json                   # Application settings
-├── .env                          # Credentials (not in git)
-├── main.py                       # Entry point
-├── LICENSE                       # MIT License
-└── README.md                     # This file
+├── src/                    # Source Code
+│   ├── ana/                # Agent Core
+│   │   ├── agent.py        # Main Agent Logic
+│   │   ├── prompts.py      # Personality & Instructions
+│   │   ├── config.py       # Config Loader
+│   │   └── tools/          # Modular Tool System
+│   │       ├── apps.py     # App Launcher
+│   │       ├── chess/      # Chess Engine Integration
+│   │       ├── file_search.py # ripgrep & fd search
+│   │       ├── memory.py    # Mem0 Integration
+│   │       └── ...         # Weather, System, Hardware, etc.
+│   └── chess_server/       # FastAPI Chess Backend
+├── ui/                     # Next.js 16/React 19 Frontend
+├── wake_word/              # Wake Word Detection Service
+├── config.json             # App Configuration
+├── .env.example            # Environment Template
+├── main.py                 # Entry Point
+├── run_chess_server.py     # Helper to start Chess Backend
+└── pyproject.toml          # Python dependencies (uv)
 ```
 
-## Usage Examples
-
-### Voice Commands
-
-**Wake Word:**
-
-- "Hey ANA" - Activates the assistant (when wake word service is running)
-
-**General:**
-
-- "What's the weather in London?"
-- "Search the web for Python tutorials"
-- "Send an email to john@example.com"
-
-**LED Control:**
-
-- "Turn on the LED"
-- "Turn off the LED"
-- "Turn on the LED for 10 seconds"
-
-**File Management:**
-
-- "Create a file called notes.txt with content 'Hello World'"
-- "Read the file notes.txt"
-- "Edit notes.txt and change the content to 'Updated content'"
-- "List all files on my Desktop"
-- "Delete the file notes.txt"
-
-**System Monitoring:**
-
-- "What's my system status?"
-- "Check RAM usage"
-- "Show me CPU usage"
-- "How much storage do I have?"
-- "Which processes are using the most memory?"
-
-**System:**
-
-- "Shut down ANA"
-
-### Personality
-
-ANA speaks like a classy butler with a touch of sarcasm, similar to JARVIS:
-
-- "Will do, Sir"
-- "Roger Boss"
-- "Check!"
-
-## Architecture
-
-The project uses a modular architecture for easy extension and maintenance:
-
-- **Configuration**: Centralized in `config.py`, only credentials from env
-- **Tools**: Each category in its own file with a registry system
-- **Agent**: Clean separation of concerns
-- **Prompts**: Template-based prompt management
-- **Memory**: Mem0 project-level custom instructions with verification and logging
-- **Shutdown**: Graceful shutdown triggers memory save and closes terminal on Windows
-
-## MCP (Model Context Protocol)
-
-- Configure external tool servers via `mcp_servers` in `config.json` (array of URLs)
-- Servers are auto-initialized and exposed as tools to the agent
-
-## Development
-
-### Adding Dependencies
-
-```bash
-# Add to pyproject.toml, then:
-uv sync
-```
-
-### Code Style
-
-- Use type hints
-- Add docstrings to all tools
-- Follow existing patterns
-- Keep files under 400 LOC
-
-## License
+## 📜 License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-## Author
+## 🤝 Acknowledgments
 
-**Abivarman**
-
-## Acknowledgments
-
-- Inspired by JARVIS from Iron Man
-- Built with [LiveKit](https://livekit.io/)
-- Powered by [Google Gemini](https://deepmind.google/technologies/gemini/)
+- **Abivarman**: Creator and Dad.
+- **Inspiration**: JARVIS (Marvel), Neuro-sama.
+- **Engine**: Powered by Google Gemini and LiveKit.

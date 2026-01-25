@@ -45,4 +45,5 @@ ui/tsconfig.tsbuildinfo
 logs/
 KMS/
 *.ppn
+*.log
 *.logs

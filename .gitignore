@@ -18,6 +18,7 @@ wheels/
 # Logs
 logs/
 *.log
+*.logs
 
 # Temporary and test files
 *.tmp

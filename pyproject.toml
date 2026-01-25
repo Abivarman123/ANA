@@ -26,7 +26,6 @@ dependencies = [
   "pillow>=12.1.0",
   "numpy>=2.3.4,<2.4.0",
   "sounddevice>=0.5.3",
-  "soundfile>=0.13.1",
   "pyserial>=3.5",
   "pvporcupine>=4.0.0",
   "psutil>=6.1.0",

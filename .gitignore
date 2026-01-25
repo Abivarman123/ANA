@@ -40,3 +40,6 @@ desktop.ini
 CHANGES.md
 docs/
 node_modules
+
+# Persistence
+.memory_cache.json

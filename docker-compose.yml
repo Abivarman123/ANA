@@ -1,0 +1,53 @@
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    container_name: ana-agent
+    env_file:
+      - .env
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - ./logs:/app/logs
+    restart: unless-stopped
+    depends_on:
+      chess:
+        condition: service_started
+    networks:
+      - ana-network
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: ana-ui
+    ports:
+      - "3000:3000"
+    environment:
+      # Use Docker service name for internal communication
+      - NEXT_PUBLIC_CHESS_WS_URL=ws://chess:8765/ws
+    env_file:
+      - ui/.env.local
+    restart: unless-stopped
+    depends_on:
+      - chess
+    networks:
+      - ana-network
+
+  chess:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    container_name: ana-chess
+    command: ["uv", "run", "run_chess_server.py"]
+    ports:
+      - "8765:8765"
+    volumes:
+      - ./config.json:/app/config.json:ro
+    restart: unless-stopped
+    networks:
+      - ana-network
+
+networks:
+  ana-network:
+    driver: bridge

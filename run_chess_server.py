@@ -28,7 +28,7 @@ def main():
     print()
 
     try:
-        asyncio.run(run_server(host="localhost", port=8765))
+        asyncio.run(run_server(host="0.0.0.0", port=8765))
     except KeyboardInterrupt:
         print("\nServer stopped.")
 

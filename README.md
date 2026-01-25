@@ -115,6 +115,32 @@ Customize ANA's behavior in `config.json`:
 
 ### Running ANA
 
+#### Option 1: Docker 🐳
+
+**Quick Start**:
+
+```bash
+# Build and run all services
+docker-compose up --build
+```
+
+**Access**:
+
+- UI: http://localhost:3000
+- Chess Server: ws://localhost:8765/ws
+
+**Common Commands**:
+
+```bash
+docker-compose up -d               # Start in background
+docker-compose logs -f             # View logs
+docker-compose down                # Stop
+```
+
+See **[DOCKER.md](DOCKER.md)** for complete Docker documentation.
+
+#### Option 2: Local Development
+
 1. **Start the Agent**:
 
    ```bash
